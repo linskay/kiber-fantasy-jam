@@ -11,10 +11,10 @@ public class Item {
     private String type;
     private Rectangle bounds;
 
-    public Item(Vector2 position, String type, String spritePath) {
+    public Item(Vector2 position, String type) {
         this.position = position;
         this.type = type;
-        this.texture = new Texture(spritePath);
+        this.texture = new Texture("badlogic.jpg");
         this.bounds = new Rectangle(position.x, position.y, 32, 32);
     }
 

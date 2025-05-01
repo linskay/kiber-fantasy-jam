@@ -4,15 +4,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.entities.Player;
 import com.cyberkingdom.entities.Enemy;
 import com.cyberkingdom.entities.Boss;
 import com.cyberkingdom.items.Item;
-import com.cyberkingdom.utils.TiledMapLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,45 +18,38 @@ import java.util.List;
 public class GameScreen extends com.badlogic.gdx.ScreenAdapter {
     private SpriteBatch batch;
     private OrthographicCamera camera;
-    private TiledMap tiledMap;
-    private OrthogonalTiledMapRenderer mapRenderer;
     private Player player;
     private List<Enemy> enemies;
     private List<Boss> bosses;
     private List<Item> items;
     private List<Item> inventory;
+    private Texture background;
 
     @Override
     public void show() {
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 1280, 720);
+        background = new Texture("badlogic.jpg");
 
-        // Load Tiled map
-        tiledMap = TiledMapLoader.loadMap("maps/level1.tmx");
-        mapRenderer = new OrthogonalTiledMapRenderer(tiledMap);
+        // Initialize player with default texture
+        player = new Player(new Vector2(100, 100));
 
-        // Initialize player (Vasia Pupkin)
-        player = new Player(new Vector2(100, 100), "sprites/vasia.png");
-
-        // Initialize enemies
+        // Initialize enemies with default textures
         enemies = new ArrayList<>();
-        enemies.add(new Enemy(new Vector2(300, 100), "TROLL_BOT", "sprites/troll_bot.png"));
-        enemies.add(new Enemy(new Vector2(400, 100), "VIRUS_FLYING", "sprites/virus.png"));
+        enemies.add(new Enemy(new Vector2(300, 100), "TROLL_BOT"));
+        enemies.add(new Enemy(new Vector2(400, 100), "VIRUS_FLYING"));
 
-        // Initialize bosses
+        // Initialize bosses with default textures
         bosses = new ArrayList<>();
-        bosses.add(new Boss(new Vector2(600, 100), "TROLL_BOT", "sprites/zmey.png")); // Zmey Gorynych
-        bosses.add(new Boss(new Vector2(1000, 100), "DEAD_INSIDE.DLL", "sprites/koschei.png")); // Koschei
+        bosses.add(new Boss(new Vector2(600, 100), "TROLL_BOT"));
+        bosses.add(new Boss(new Vector2(1000, 100), "DEAD_INSIDE.DLL"));
 
-        // Initialize items
+        // Initialize items with default textures
         items = new ArrayList<>();
-        items.add(new Item(new Vector2(200, 100), "USB_SCATERT", "sprites/usb_scatter.png"));
-        items.add(new Item(new Vector2(250, 100), "CRYPTO_SHOVEL", "sprites/crypto_shovel.png"));
-        items.add(new Item(new Vector2(300, 100), "RTX_4090", "sprites/rtx_4090.png"));
-        items.add(new Item(new Vector2(350, 100), "TUSHENKA", "sprites/tushenka.png"));
-        items.add(new Item(new Vector2(400, 100), "GROK_ALGORITHMS", "sprites/grok_book.png"));
-        items.add(new Item(new Vector2(450, 100), "WIFI_KEY", "sprites/wifi_key.png"));
+        items.add(new Item(new Vector2(200, 100), "USB_SCATERT"));
+        items.add(new Item(new Vector2(250, 100), "CRYPTO_SHOVEL"));
+        items.add(new Item(new Vector2(300, 100), "RTX_4090"));
 
         inventory = new ArrayList<>();
     }
@@ -70,15 +61,16 @@ public class GameScreen extends com.badlogic.gdx.ScreenAdapter {
 
         camera.position.set(player.getPosition().x, player.getPosition().y, 0);
         camera.update();
-        mapRenderer.setView(camera);
-        mapRenderer.render();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
+        // Draw background
+        batch.draw(background, 0, 0, 1280, 720);
+
         // Render player
         player.render(batch);
-        player.update(delta, tiledMap);
+        player.update(delta);
 
         // Render enemies
         for (Enemy enemy : enemies) {
@@ -126,8 +118,7 @@ public class GameScreen extends com.badlogic.gdx.ScreenAdapter {
     @Override
     public void dispose() {
         batch.dispose();
-        mapRenderer.dispose();
-        tiledMap.dispose();
+        background.dispose();
         player.dispose();
         for (Enemy enemy : enemies) enemy.dispose();
         for (Boss boss : bosses) boss.dispose();

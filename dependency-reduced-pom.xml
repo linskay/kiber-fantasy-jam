@@ -26,7 +26,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.cyberkingdom.DesktopLauncher</mainClass>
+                  <mainClass>DesktopLauncher</mainClass>
                 </transformer>
               </transformers>
             </configuration>

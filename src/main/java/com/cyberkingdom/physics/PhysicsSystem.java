@@ -61,7 +61,7 @@ public class PhysicsSystem {
             // Гравитация для игрока
             if (entity == player) {
                 if (position.y > 0) {
-                    velocity.y += 500 * deltaTime; // гравитация вниз
+                    velocity.y += -500 * deltaTime; // гравитация вниз
                 } else {
                     position.y = 0;
                     velocity.y = 0;

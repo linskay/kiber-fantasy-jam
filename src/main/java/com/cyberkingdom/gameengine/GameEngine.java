@@ -34,7 +34,13 @@ public class GameEngine extends ApplicationAdapter {
         spriteRenderer = new SpriteRenderer(batch);
         entitySystem = new EntitySystem();
         levelLoader = new LevelLoader(spriteManager, entitySystem); // Загружаем уровень и сущности
-        physicsSystem = new PhysicsSystem(entitySystem); // Инициализируем после загрузки уровня
+
+        // Динамически получаем размеры экрана
+        float worldWidth = Gdx.graphics.getWidth();
+        float worldHeight = Gdx.graphics.getHeight();
+
+        physicsSystem = new PhysicsSystem(entitySystem, worldWidth, worldHeight); // Передаём размеры мира
+
         uiManager = new UIManager(spriteRenderer);
         gameScreen = new GameScreen(entitySystem, physicsSystem, levelLoader, spriteRenderer, uiManager);
         entityFactory = new EntityFactory();

@@ -3,8 +3,10 @@ package com.cyberkingdom.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.entities.Boss;
 import com.cyberkingdom.entities.BossFightLogic;
 import com.cyberkingdom.entities.EntitySystem;
@@ -63,11 +65,18 @@ public class GameScreen {
         }
     }
 
+
     public void render(float deltaTime) {
         System.out.println("Рендеринг кадра, сущностей: " + entitySystem.getEntities().size());
+
+        physicsSystem.update(deltaTime);
+        if (player != null) {
+            camera.position.set(player.getPosition().x, player.getPosition().y, 0);
+            camera.update();
+        }
+
         Gdx.gl.glClearColor(0, 0, 1, 1); // Синий фон
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        camera.update();
         mapRenderer.setView(camera);
         mapRenderer.render();
         System.out.println("Карта отрендерена");
@@ -86,15 +95,11 @@ public class GameScreen {
         spriteRenderer.end();
         System.out.println("Отрендерено сущностей: " + renderedEntities);
 
-        physicsSystem.update(deltaTime);
-        if (player != null) {
-            camera.position.set(player.getPosition().x, player.getPosition().y, 0);
-            camera.update();
-        }
-    }
 
+    }
     public void dispose() {
         System.out.println("Освобождение ресурсов GameScreen");
         mapRenderer.dispose();
     }
 }
+

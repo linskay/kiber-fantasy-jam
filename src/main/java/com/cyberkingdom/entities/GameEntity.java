@@ -1,57 +1,71 @@
 package com.cyberkingdom.entities;
 
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.cyberkingdom.rendering.AnimationComponent;
-import com.cyberkingdom.physics.CollisionComponent;
+import com.cyberkingdom.rendering.SpriteManager;
 
-public class GameEntity {
-    private String id;
-    private Vector2 position;
-    private Vector2 velocity;
-    private EntityType type;
-    private AnimationComponent animation;
-    private CollisionComponent collision;
-    private boolean active;
+public abstract class GameEntity {
+    protected Vector2 position;
+    protected Vector2 velocity;
+    protected String name;
+    protected boolean isActive;
+    protected AnimationComponent animation;
+    protected static SpriteManager spriteManager;
 
-    public GameEntity(String id, EntityType type) {
-        this.id = id;
-        this.type = type;
-        this.position = new Vector2(0, 0);
-        this.velocity = new Vector2(0, 0);
-        this.active = true;
+    public GameEntity(String name) {
+        this.name = name;
+        this.position = new Vector2();
+        this.velocity = new Vector2();
+        this.isActive = true;
         this.animation = new AnimationComponent();
-        this.collision = new CollisionComponent(32, 32); // Размер по умолчанию
+        setupAnimations();
     }
 
-    public void update(float deltaTime) {
-        // Обновление позиции на основе velocity
-        position.x += velocity.x * deltaTime;
-        position.y += velocity.y * deltaTime;
-
-        // Обновление компонентов
-        animation.update(deltaTime);
-        collision.update(position);
-    }
-
-    public void destroy() {
-        this.active = false;
-    }
-
-    // Getters и Setters
     public Vector2 getPosition() { return position; }
     public Vector2 getVelocity() { return velocity; }
-    public EntityType getType() { return type; }
-    public boolean isActive() { return active; }
+    public void setVelocity(float x, float y) { velocity.set(x, y); }
     public AnimationComponent getAnimation() { return animation; }
-    public CollisionComponent getCollision() { return collision; }
+    public boolean isActive() { return isActive; }
+    public void setActive(boolean active) { this.isActive = active; }
+    public String getName() { return name; }
 
-    public enum EntityType {
-        PLAYER,
-        ENEMY,
-        BOSS,
-        NPC,
-        ITEM,
-        PROJECTILE,
-        ENVIRONMENT
+    public void setupAnimations() {
+        if (spriteManager != null) {
+            TextureRegion[] frames = spriteManager.getFrames(name);
+            if (frames != null && frames.length > 0) {
+                for (TextureRegion frame : frames) {
+                    animation.addFrame(frame);
+                }
+                animation.setFrameDuration(0.1f);
+                System.out.println("Кадры загружены для " + name);
+            } else {
+                System.err.println("Нет кадров для " + name + ", создаем заглушку");
+                Pixmap pixmap = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+                pixmap.setColor(Color.RED);
+                pixmap.fill();
+                Texture texture = new Texture(pixmap);
+                animation.addFrame(new TextureRegion(texture));
+                animation.setFrameDuration(0.1f);
+                pixmap.dispose();
+                System.out.println("Заглушка создана для " + name);
+            }
+        } else {
+            System.err.println("SpriteManager не инициализирован для " + name);
+            Pixmap pixmap = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+            pixmap.setColor(Color.RED);
+            pixmap.fill();
+            Texture texture = new Texture(pixmap);
+            animation.addFrame(new TextureRegion(texture));
+            animation.setFrameDuration(0.1f);
+            pixmap.dispose();
+            System.out.println("Заглушка создана для " + name + " (SpriteManager отсутствует)");
+        }
+    }
+
+    public static void setSpriteManager(SpriteManager manager) {
+        spriteManager = manager;
     }
 }

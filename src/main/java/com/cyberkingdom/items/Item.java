@@ -1,36 +1,30 @@
 package com.cyberkingdom.items;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.cyberkingdom.entities.GameEntity;
 
-public class Item {
-    private Vector2 position;
+public class Item extends GameEntity {
+    private String itemType;
     private Texture texture;
-    private String type;
-    private Rectangle bounds;
 
-    public Item(Vector2 position, String type) {
-        this.position = position;
-        this.type = type;
-        this.texture = new Texture("badlogic.jpg");
-        this.bounds = new Rectangle(position.x, position.y, 32, 32);
+    public Item(Vector2 position, String itemType) {
+        super("Item_" + itemType);
+        this.itemType = itemType;
+        this.position.set(position);
+        try {
+            this.texture = new Texture(Gdx.files.internal("assets/items/" + itemType.toLowerCase() + ".png"));
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить текстуру: " + e.getMessage());
+            this.texture = new Texture(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        }
     }
 
-    public void render(SpriteBatch batch) {
-        batch.draw(texture, position.x, position.y);
+    public void use() {
+        System.out.println("Использован предмет: " + itemType);
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public Rectangle getBounds() {
-        return bounds;
-    }
-
-    public void dispose() {
-        texture.dispose();
-    }
+    public String getItemType() { return itemType; }
+    public void dispose() { if (texture != null) texture.dispose(); }
 }

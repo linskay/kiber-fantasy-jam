@@ -2,29 +2,26 @@ package com.cyberkingdom.rendering;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.cyberkingdom.items.Item;
 
 public class SpriteManager {
-    private Texture itemsAtlas;
-    private Texture uiAtlas;
+    private Texture entitiesTexture;
 
     public SpriteManager() {
-        // Загрузка текстур (временная реализация)
-        itemsAtlas = new Texture("items.png");
-        uiAtlas = new Texture("ui.png");
+        try {
+            entitiesTexture = new Texture("assets/entities.png");
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить entities.png: " + e.getMessage());
+            entitiesTexture = new Texture(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        }
     }
 
-    public TextureRegion getSlotTexture() {
-        return new TextureRegion(uiAtlas, 0, 0, 32, 32);
-    }
-
-    public TextureRegion getItemTexture(String itemType) {
-        // Логика выбора текстуры по типу предмета
-        return new TextureRegion(itemsAtlas, 0, 0, 32, 32);
+    public TextureRegion[] getFrames(String animationName) {
+        TextureRegion[] frames = new TextureRegion[1];
+        frames[0] = new TextureRegion(entitiesTexture, 0, 0, 32, 32); // Заглушка
+        return frames;
     }
 
     public void dispose() {
-        itemsAtlas.dispose();
-        uiAtlas.dispose();
+        if (entitiesTexture != null) entitiesTexture.dispose();
     }
 }

@@ -1,24 +1,27 @@
 package com.cyberkingdom.entities;
 
-import com.cyberkingdom.rendering.Animation;
-import com.cyberkingdom.rendering.SpriteManager;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
+import com.cyberkingdom.items.Item;
 
 public class EntityFactory {
-    private SpriteManager spriteManager;
-
-    public EntityFactory(SpriteManager spriteManager) {
-        this.spriteManager = spriteManager;
+    public GameEntity createPlayer(float x, float y) {
+        System.out.println("Создание игрока на (" + x + ", " + y + ")");
+        return new Player(x, y);
     }
 
-    public Player createPlayer(float x, float y) {
-        Player player = new Player();
-        TextureRegion[] walkFrames = spriteManager.getFrames("player_walk");
-        Animation walkAnimation = new Animation(walkFrames, 0.1f, true);
-        player.getAnimationComponent().setCurrentAnimation(walkAnimation);
-        player.getPosition().set(x, y);
-        return player;
+    public GameEntity createEnemy(String name, float x, float y) {
+        System.out.println("Создание врага " + name + " на (" + x + ", " + y + ")");
+        Enemy.EnemyType type = Enemy.EnemyType.valueOf(name.toUpperCase()); // Предполагаем, что имя соответствует типу
+        return new Enemy(type, x, y);
     }
 
-    // ... другие методы создания сущностей
+    public GameEntity createBoss(String name, float x, float y) {
+        System.out.println("Создание босса " + name + " на (" + x + ", " + y + ")");
+        return new Boss(name, x, y);
+    }
+
+    public GameEntity createItem(Vector2 position, String name) {
+        System.out.println("Создание предмета " + name + " на (" + position.x + ", " + position.y + ")");
+        return new Item(position, name);
+    }
 }

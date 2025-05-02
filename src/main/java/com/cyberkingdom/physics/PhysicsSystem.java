@@ -1,35 +1,62 @@
 package com.cyberkingdom.physics;
 
+import com.badlogic.gdx.math.Vector2;
+import com.cyberkingdom.entities.EntitySystem;
 import com.cyberkingdom.entities.GameEntity;
-import com.cyberkingdom.world.WorldPhysics;
-import java.util.List;
+import com.cyberkingdom.entities.Player;
+import com.cyberkingdom.input.InputHandler;
 
 public class PhysicsSystem {
-    private WorldPhysics worldPhysics;
+    private EntitySystem entitySystem;
+    private InputHandler inputHandler;
+    private Player player;
 
-    public PhysicsSystem() {
-        worldPhysics = new WorldPhysics();
+    public PhysicsSystem(EntitySystem entitySystem) {
+        this.entitySystem = entitySystem;
+        initializePlayer();
     }
 
-    public void update(float deltaTime, List<GameEntity> entities) {
-        // Применяем гравитацию и проверяем коллизии
-        entities.stream()
-                .filter(e -> e.getPhysics() != null)
-                .forEach(entity -> {
-                    worldPhysics.applyPhysics(entity);
-                    checkCollisions(entity, entities);
-                });
+    private void initializePlayer() {
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (entity instanceof Player) {
+                this.player = (Player) entity;
+                this.inputHandler = new InputHandler(player);
+                System.out.println("Игрок инициализирован в PhysicsSystem: " + player);
+                break;
+            }
+        }
+        if (player == null) {
+            System.err.println("Игрок не инициализирован в PhysicsSystem");
+        }
     }
 
-    private void checkCollisions(GameEntity entity, List<GameEntity> entities) {
-        entities.stream()
-                .filter(other -> entity != other)
-                .filter(other -> entity.getCollision() != null && other.getCollision() != null)
-                .filter(other -> entity.getCollision().collidesWith(other.getCollision()))
-                .forEach(other -> handleCollision(entity, other));
-    }
+    public void update(float deltaTime) {
+        if (player == null) {
+            initializePlayer(); // Проверяем еще раз, если игрок не найден
+        }
+        if (inputHandler != null && player != null) {
+            inputHandler.update(player.getVelocity());
+        } else {
+            System.err.println("Игрок или InputHandler не инициализированы в PhysicsSystem");
+        }
 
-    private void handleCollision(GameEntity a, GameEntity b) {
-        // Логика обработки столкновений
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (!entity.isActive()) continue;
+            Vector2 position = entity.getPosition();
+            Vector2 velocity = entity.getVelocity();
+            position.add(velocity.cpy().scl(deltaTime));
+
+            if (entity == player) {
+                if (position.y > 0) {
+                    velocity.y += 500 * deltaTime; // Гравитация
+                } else {
+                    position.y = 0;
+                    velocity.y = 0;
+                    player.setJumping(false);
+                }
+            }
+
+            System.out.println("Обновлена позиция " + entity.getName() + ": (" + position.x + ", " + position.y + ")");
+        }
     }
 }

@@ -1,34 +1,19 @@
 package com.cyberkingdom.items;
 
-import com.cyberkingdom.entities.Player;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Inventory {
-    private Item[] items;
-    private int capacity;
+    private List<Item> items;
+    private int capacity = 5;
 
-    public Inventory(int capacity) {
-        this.capacity = capacity;
-        this.items = new Item[capacity];
+    public Inventory() {
+        this.items = new ArrayList<>();
     }
 
-    public boolean addItem(Item item) {
-        for (int i = 0; i < capacity; i++) {
-            if (items[i] == null) {
-                items[i] = item;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public void useItem(int slot, Player player) {
-        if (slot >= 0 && slot < capacity && items[slot] != null) {
-            items[slot].use(player);
-            items[slot] = null;
-        }
-    }
-
-    public Item getItem(int slot) {
-        return items[slot];
+    public int getCapacity() { return capacity; }
+    public List<Item> getItems() { return items; }
+    public void addItem(Item item) {
+        if (items.size() < capacity) items.add(item);
     }
 }

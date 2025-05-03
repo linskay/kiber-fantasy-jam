@@ -15,11 +15,14 @@ public class UIManager {
         this.healthBar = new HealthBar();
     }
 
-    public void render(Player player, SpriteBatch batch) {
-        System.out.println("Рендеринг UIManager");
-        inventoryUI.render(player, batch);
+    public void render(Player player) {
+        SpriteBatch batch = spriteRenderer.getBatch();
+
+        // Рендерим здоровье
         healthBar.render(player, batch);
-        System.out.println("UIManager отрендерен");
+
+        // Рендерим инвентарь
+        inventoryUI.render(player, batch);
     }
 
     public void dispose() {

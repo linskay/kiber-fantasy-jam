@@ -1,6 +1,5 @@
 package com.cyberkingdom.ui;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -14,15 +13,15 @@ public class InventoryUI {
     }
 
     public void render(Player player, SpriteBatch batch) {
-        System.out.println("Рендеринг InventoryUI");
-        batch.end();
+        // Рисуем инвентарь
         shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.setColor(Color.GREEN);
-        shapeRenderer.rect(10, 10, 200, 50); // Уменьшенный размер рамки
+        shapeRenderer.rect(10, 10, 200, 50);
         shapeRenderer.end();
-        batch.begin();
-        System.out.println("InventoryUI отрендерен");
+
+        // Здесь можно добавить отрисовку предметов инвентаря
+        // используя batch
     }
 
     public void dispose() {

@@ -1,197 +1,94 @@
 package com.cyberkingdom.physics;
 
-
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.cyberkingdom.entities.Boss;
 import com.cyberkingdom.entities.EntitySystem;
-import com.cyberkingdom.entities.GameEntity;
 import com.cyberkingdom.entities.Player;
 import com.cyberkingdom.input.InputHandler;
 
-//public class PhysicsSystem {
-//    private EntitySystem entitySystem;
-//    private InputHandler inputHandler;
-//    private Player player;
-//
-//    private float worldWidth;
-//    private float worldHeight;
-//
-//    // Конструктор с передачей размеров игрового мира/экрана
-//    public PhysicsSystem(EntitySystem entitySystem, float worldWidth, float worldHeight) {
-//        this.entitySystem = entitySystem;
-//        this.worldWidth = worldWidth;
-//        this.worldHeight = worldHeight;
-//        initializePlayer();
-//    }
-//
-//    private void initializePlayer() {
-//        for (GameEntity entity : entitySystem.getEntities()) {
-//            if (entity instanceof Player) {
-//                this.player = (Player) entity;
-//                this.inputHandler = new InputHandler(player);
-//                System.out.println("Игрок инициализирован в PhysicsSystem: " + player);
-//                break;
-//            }
-//        }
-//        if (player == null) {
-//            System.err.println("Игрок не инициализирован в PhysicsSystem");
-//        }
-//    }
-//
-//    public void update(float deltaTime) {
-//        if (player == null) {
-//            initializePlayer(); // Проверяем еще раз, если игрок не найден
-//        }
-//
-//        if (inputHandler != null && player != null) {
-//            // Обновляем скорость игрока на основе ввода
-//            inputHandler.update(player.getVelocity());
-//        } else {
-//            System.err.println("Игрок или InputHandler не инициализированы в PhysicsSystem");
-//        }
-//
-//        for (GameEntity entity : entitySystem.getEntities()) {
-//            if (!entity.isActive()) continue;
-//
-//            Vector2 position = entity.getPosition();
-//            Vector2 velocity = entity.getVelocity();
-//
-//            // Обновляем позицию с учётом скорости и времени
-//            position.add(velocity.cpy().scl(deltaTime));
-//
-//            // Гравитация для игрока
-//            if (entity == player) {
-//                if (position.y > 0) {
-//                    velocity.y += -500 * deltaTime; // гравитация вниз
-//                } else {
-//                    position.y = 0;
-//                    velocity.y = 0;
-//                    player.setJumping(false);
-//                }
-//            }
-//
-//            // Ограничение позиции по границам мира (учитываем размер сущности)
-//            float halfWidth = 16f*2f;  // примерный размер (половина ширины) спрайта/коллайдера
-//            float halfHeight = 16f*2f; // примерный размер (половина высоты)
-//
-//            // Ограничиваем по X
-//            if (position.x < halfWidth) position.x = halfWidth;
-//            if (position.x > worldWidth - halfWidth) position.x = worldWidth - halfWidth;
-//
-//            // Ограничиваем по Y
-//            if (position.y < 0) {
-//                position.y = 0;
-//                velocity.y = 0;
-//                if (entity == player) player.setJumping(false);
-//            }
-//            if (position.y > worldHeight - halfHeight) {
-//                position.y = worldHeight - halfHeight;
-//                velocity.y = 0;
-//            }
-//
-//            // Обновляем позицию сущности после ограничений
-//            entity.getPosition().set(position);
-//
-//            System.out.println("Обновлена позиция " + entity.getName() + ": (" + position.x + ", " + position.y + ")");
-//        }
-//    }
-//}
+import java.util.ArrayList;
+import java.util.List;
 
 public class PhysicsSystem {
-    private EntitySystem entitySystem;
-    private InputHandler inputHandler;
+    private List<Rectangle> platforms = new ArrayList<>();
+    private float gravity = -900f;
     private Player player;
+    private InputHandler inputHandler;
 
-    private float worldWidth;
-    private float worldHeight;
-
-    // Конструктор с передачей размеров игрового мира/экрана
-    public PhysicsSystem(EntitySystem entitySystem, float worldWidth, float worldHeight) {
-        this.entitySystem = entitySystem;
-        this.worldWidth = worldWidth;
-        this.worldHeight = worldHeight;
-        initializePlayer();
+    public void setPlayer(Player player) {
+        this.player = player;
+        this.inputHandler = new InputHandler(player);
     }
 
-    private void initializePlayer() {
-        for (GameEntity entity : entitySystem.getEntities()) {
-            if (entity instanceof Player) {
-                this.player = (Player) entity;
-                this.inputHandler = new InputHandler(player);
-                System.out.println("Игрок инициализирован в PhysicsSystem: " + player);
-                break;
-            }
-        }
-        if (player == null) {
-            System.err.println("Игрок не инициализирован в PhysicsSystem");
-        }
+    public PhysicsSystem(EntitySystem entitySystem, float worldWidth, float worldHeight) {
     }
 
     public void update(float deltaTime) {
-        if (player == null) {
-            initializePlayer(); // Проверяем еще раз, если игрок не найден
+        if (inputHandler != null) {
+            inputHandler.update(deltaTime);
         }
 
-        if (inputHandler != null && player != null) {
-            // Обновляем скорость игрока на основе ввода
-            inputHandler.update(player.getVelocity());
-        } else {
-            System.err.println("Игрок или InputHandler не инициализированы в PhysicsSystem");
+        if (player != null && player.isActive()) {
+            // Обновление физики игрока
+            Vector2 velocity = player.getVelocity();
+            Vector2 position = player.getPosition();
+
+            // Применение гравитации
+            velocity.y += gravity * deltaTime;
+
+            // Обновление позиции
+            position.mulAdd(velocity, deltaTime);
+
+            // Обработка коллизий
+            handlePlayerCollisions(player);
         }
+    }
 
-        for (GameEntity entity : entitySystem.getEntities()) {
-            if (!entity.isActive()) continue;
+    private void handlePlayerCollisions(Player player) {
+        Rectangle playerBounds = player.getCollisionComponent().getBounds();
+        boolean onGround = false;
 
-            Vector2 position = entity.getPosition();
-            Vector2 velocity = entity.getVelocity();
+        for (Rectangle platform : platforms) {
+            if (playerBounds.overlaps(platform)) {
+                float overlapLeft = playerBounds.x + playerBounds.width - platform.x;
+                float overlapRight = platform.x + platform.width - playerBounds.x;
+                float overlapTop = playerBounds.y + playerBounds.height - platform.y;
+                float overlapBottom = platform.y + platform.height - playerBounds.y;
 
-            // Обновляем позицию с учётом скорости и времени
-            position.add(velocity.cpy().scl(deltaTime));
+                float minOverlap = Math.min(
+                        Math.min(overlapLeft, overlapRight),
+                        Math.min(overlapTop, overlapBottom)
+                );
 
-            // Получаем половину ширины и высоты из коллизии, если есть
-            float halfWidth = 16f;  // Значения по умолчанию
-            float halfHeight = 16f;
-
-            if (entity instanceof Player) {
-                CollisionComponent collision = ((Player) entity).getCollisionComponent();
-                halfWidth = collision.getBounds().width / 2f;
-                halfHeight = collision.getBounds().height / 2f;
-            } else if (entity instanceof Boss) {
-                CollisionComponent collision = ((Boss) entity).getCollisionComponent();
-                halfWidth = collision.getBounds().width / 2f;
-                halfHeight = collision.getBounds().height / 2f;
-            }
-
-            // Гравитация для игрока
-            if (entity == player) {
-                if (position.y - halfHeight > 0) {
-                    velocity.y += -500 * deltaTime; // гравитация вниз
-                } else {
-                    position.y = halfHeight;
-                    velocity.y = 0;
+                if (minOverlap == overlapTop) {
+                    player.getPosition().y = platform.y - playerBounds.height;
+                    player.getVelocity().y = 0;
+                } else if (minOverlap == overlapBottom) {
+                    player.getPosition().y = platform.y + platform.height;
+                    player.getVelocity().y = 0;
+                    onGround = true;
                     player.setJumping(false);
+                } else if (minOverlap == overlapLeft) {
+                    player.getPosition().x = platform.x - playerBounds.width;
+                    player.getVelocity().x = 0;
+                } else if (minOverlap == overlapRight) {
+                    player.getPosition().x = platform.x + platform.width;
+                    player.getVelocity().x = 0;
                 }
             }
-
-            // Ограничение по X с учётом размеров
-            if (position.x - halfWidth < 0) position.x = halfWidth;
-            if (position.x + halfWidth > worldWidth) position.x = worldWidth - halfWidth;
-
-            // Ограничение по Y с учётом размеров
-            if (position.y - halfHeight < 0) {
-                position.y = halfHeight;
-                velocity.y = 0;
-                if (entity == player) player.setJumping(false);
-            }
-            if (position.y + halfHeight > worldHeight) {
-                position.y = worldHeight - halfHeight;
-                velocity.y = 0;
-            }
-
-            // Обновляем позицию сущности после ограничений
-            entity.getPosition().set(position);
-
-            System.out.println("Обновлена позиция " + entity.getName() + ": (" + position.x + ", " + position.y + ")");
         }
+        player.setOnGround(onGround);
+    }
+
+    public void addPlatform(Rectangle platform) {
+        platforms.add(platform);
+    }
+
+    public List<Rectangle> getPlatforms() {
+        return new ArrayList<>(platforms);
+    }
+
+    public void clearPlatforms() {
+        platforms.clear();
     }
 }

@@ -1,134 +1,112 @@
 package com.cyberkingdom.world;
 
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.MapObjects;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.cyberkingdom.entities.EntityFactory;
-import com.cyberkingdom.entities.EntitySystem;
-import com.cyberkingdom.entities.GameEntity;
+import com.cyberkingdom.entities.*;
+import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.utils.TiledMapLoader;
 
-//public class LevelLoader {
-//    private TiledMap currentMap;
-//    private EntitySystem entitySystem;
-//    private EntityFactory entityFactory;
-//
-//    public LevelLoader(SpriteManager spriteManager, EntitySystem entitySystem) {
-//        System.out.println("Создание LevelLoader");
-//        this.entitySystem = entitySystem;
-//        this.entityFactory = new EntityFactory();
-//        this.currentMap = TiledMapLoader.loadMap("levels/level1.tmx");
-//        loadLevel1();
-//    }
-//
-//    private void loadLevel1() {
-//        System.out.println("Загрузка сущностей level1");
-//        GameEntity player = entityFactory.createPlayer(100, 100);
-//        GameEntity enemy = entityFactory.createEnemy("TROLL_BOT", 300, 100);
-//        GameEntity boss = entityFactory.createBoss("STOP_GPT", 400, 100);
-//        GameEntity item = entityFactory.createItem(new Vector2(200, 200), "USB_SCATERT");
-//
-//        entitySystem.addEntity(player);
-//        entitySystem.addEntity(enemy);
-//        entitySystem.addEntity(boss);
-//        entitySystem.addEntity(item);
-//
-//        System.out.println("Сущности level1 загружены, всего: " + entitySystem.getEntities().size());
-//        for (GameEntity entity : entitySystem.getEntities()) {
-//            System.out.println("Сущность добавлена: " + entity.getName() + " на (" + entity.getPosition().x + ", " + entity.getPosition().y + ")");
-//        }
-//    }
-//
-//    public TiledMap getCurrentMap() {
-//        return currentMap;
-//    }
-//}
-
 public class LevelLoader {
     private TiledMap currentMap;
-    private EntitySystem entitySystem;
-    private EntityFactory entityFactory;
+    private PhysicsSystem physicsSystem;
+    private int levelNumber;
+    private int totalItems = 0;
 
-    public LevelLoader(SpriteManager spriteManager, EntitySystem entitySystem, String mapPath, int level) {
-        System.out.println("Создание LevelLoader для карты: " + mapPath + ", уровень: " + level);
-        this.entitySystem = entitySystem;
-        this.entityFactory = new EntityFactory();
-
-        // Загружаем карту по переданному пути
+    public LevelLoader(SpriteManager spriteManager, EntitySystem entitySystem,
+                       PhysicsSystem physicsSystem, String mapPath, int level) {
+        EntityFactory.resetItemCounter();
+        this.physicsSystem = physicsSystem;
+        this.levelNumber = level;
         this.currentMap = TiledMapLoader.loadMap(mapPath);
 
-        // Загружаем сущности в зависимости от уровня
-        switch (level) {
-            case 1:
-                loadLevel1();
-                break;
-            case 2:
-                loadLevel2();
-                break;
-            case 3:
-                loadLevel3();
-                break;
-            case 4:
-                loadLevel4();
-                break;
-            case 5:
-                loadLevel5();
-                break;
-            // Добавьте другие уровни по необходимости
-            default:
-                System.err.println("Неизвестный уровень: " + level + ", загружаем level1 по умолчанию");
-                loadLevel1();
-                break;
+        loadMapObjects();
+
+        if (levelNumber == 1) {
+            generateLevel1Content(entitySystem);
         }
     }
 
-    private void loadLevel1() {
-        System.out.println("Загрузка сущностей level1");
-        GameEntity player = entityFactory.createPlayer(100, 100);
-        GameEntity enemy = entityFactory.createEnemy("TROLL_BOT", 300, 100);
-        GameEntity boss = entityFactory.createBoss("STOP_GPT", 200, 35);
-        GameEntity item = entityFactory.createItem(new Vector2(200, 200), "USB_SCATERT");
-
-        entitySystem.addEntity(player);
-        entitySystem.addEntity(enemy);
-        entitySystem.addEntity(boss);
-        entitySystem.addEntity(item);
-
-        logEntities();
-    }
-
-    private void loadLevel2() {
-        System.out.println("Загрузка сущностей level2");
-        GameEntity player = entityFactory.createPlayer(150, 150);
-        GameEntity enemy = entityFactory.createEnemy("GOBLIN", 350, 150);
-        // Добавьте другие сущности для level2
-
-        entitySystem.addEntity(player);
-        entitySystem.addEntity(enemy);
-
-        logEntities();
-    }
-    private void loadLevel3() {
-
-
-        logEntities();
-    }
-    private void loadLevel4() {
-
-        logEntities();
-    }
-    private void loadLevel5() {
-
-        logEntities();
-    }
-    private void logEntities() {
-        System.out.println("Сущности загружены, всего: " + entitySystem.getEntities().size());
-        for (GameEntity entity : entitySystem.getEntities()) {
-            System.out.println("Сущность добавлена: " + entity.getName() + " на (" + entity.getPosition().x + ", " + entity.getPosition().y + ")");
+    private void loadMapObjects() {
+        // Проверяем наличие слоя с платформами
+        if (currentMap.getLayers().get("platforms") != null) {
+            MapObjects platforms = currentMap.getLayers().get("platforms").getObjects();
+            for (MapObject object : platforms) {
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                    physicsSystem.addPlatform(rect);
+                }
+            }
         }
+    }
+
+    private void generateLevel1Content(EntitySystem entitySystem) {
+        // Создаем обязательные платформы, если их нет в TiledMap
+        if (physicsSystem.getPlatforms().isEmpty()) {
+            createDefaultPlatforms();
+        }
+
+        // Случайные предметы (3-7 штук)
+        totalItems = 3 + (int)(Math.random() * 5);
+        for (int i = 0; i < totalItems; i++) {
+            spawnRandomItem(entitySystem);
+        }
+
+        // Кот-майнер (30% шанс)
+        if (Math.random() < 0.3) {
+            spawnCatMiner(entitySystem);
+        }
+    }
+
+    private void createDefaultPlatforms() {
+        // Создаем базовые платформы, если их нет в TiledMap
+        physicsSystem.addPlatform(new Rectangle(0, 0, 800, 50)); // Пол
+        physicsSystem.addPlatform(new Rectangle(100, 150, 200, 20));
+        physicsSystem.addPlatform(new Rectangle(400, 250, 200, 20));
+    }
+
+    private void spawnRandomItem(EntitySystem entitySystem) {
+        if (!physicsSystem.getPlatforms().isEmpty()) {
+            Rectangle platform = getRandomPlatform();
+            float x = platform.x + (float)(Math.random() * platform.width);
+            float y = platform.y + platform.height + 10;
+
+            entitySystem.addEntity(new EntityFactory().createRandomItem(x, y));
+        }
+    }
+
+    private void spawnCatMiner(EntitySystem entitySystem) {
+        if (!physicsSystem.getPlatforms().isEmpty()) {
+            Rectangle platform = getRandomPlatform();
+            float x = platform.x + platform.width/2;
+            float y = platform.y + platform.height + 50;
+
+            entitySystem.addEntity(new EntityFactory().createBoss("CAT_MINER", x, y));
+        }
+    }
+
+    private Rectangle getRandomPlatform() {
+        // Безопасное получение случайной платформы
+        if (physicsSystem.getPlatforms().isEmpty()) {
+            return new Rectangle(0, 0, 100, 20); // Возвращаем платформу по умолчанию
+        }
+        int randomIndex = (int)(Math.random() * physicsSystem.getPlatforms().size());
+        return physicsSystem.getPlatforms().get(randomIndex);
     }
 
     public TiledMap getCurrentMap() {
         return currentMap;
+    }
+
+    public int getLevelNumber() {
+        return levelNumber;
+    }
+
+    public int getTotalItems() {
+        return totalItems;
     }
 }

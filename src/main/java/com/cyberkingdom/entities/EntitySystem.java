@@ -15,12 +15,10 @@ public class EntitySystem {
     }
 
     public List<GameEntity> getEntities() {
-        return entities;
+        return new ArrayList<>(entities);
     }
 
-    // Очистка всех сущностей из системы
     public void clear() {
         entities.clear();
-        System.out.println("EntitySystem очищен, сущностей теперь: " + entities.size());
     }
 }

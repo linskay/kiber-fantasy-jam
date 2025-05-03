@@ -5,33 +5,27 @@ import com.badlogic.gdx.math.Vector2;
 
 public class CollisionComponent {
     private Rectangle bounds;
-    private boolean isSolid;
+    private Vector2 offset;
 
     public CollisionComponent(float width, float height) {
-        this.bounds = new Rectangle(64, 64, width, height);
-        this.isSolid = true;
+        this.bounds = new Rectangle(0, 0, width, height);
+        this.offset = new Vector2(-width/2, -height/2);
     }
 
-//    public void update(Vector2 position) {
-//        bounds.setPosition(position);
-//    }
-
     public void update(Vector2 position) {
-        bounds.setPosition(position.x - bounds.getWidth() / 2, position.y - bounds.getHeight() / 2);
+        bounds.setPosition(position.x + offset.x, position.y + offset.y);
     }
 
     public boolean collidesWith(CollisionComponent other) {
         return bounds.overlaps(other.bounds);
     }
 
-    // Getters
-    public Rectangle getBounds() { return bounds; }
-    public boolean isSolid() { return isSolid; }
+    public Rectangle getBounds() {
+        return bounds;
+    }
 
-
-
-    // Метод для отладки - выводит координаты и размеры прямоугольника
     public void debugPrint() {
-        System.out.println("Bounds: x=" + bounds.x + ", y=" + bounds.y + ", w=" + bounds.width + ", h=" + bounds.height);
+        System.out.printf("Collision bounds: (%.1f, %.1f) %.1fx%.1f%n",
+                bounds.x, bounds.y, bounds.width, bounds.height);
     }
 }

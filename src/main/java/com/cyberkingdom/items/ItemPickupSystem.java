@@ -43,8 +43,6 @@ public class ItemPickupSystem {
         // Удаляем предметы, которые собраны
         for (Item item : itemsToRemove) {
             entitySystem.removeEntity(item);
-            // Если используете физику, удалите из physicsSystem
-            // physicsSystem.removePhysics(item);
             item.dispose();
         }
     }

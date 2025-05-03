@@ -14,52 +14,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-//public class Item extends GameEntity implements Collidable {
-//    private String itemType;
-//    private Texture texture;
-//    private CollisionComponent collision;
-//
-//    public Item(Vector2 position, String itemType) {
-//        super("Item_" + itemType);
-//        this.itemType = itemType;
-//        this.position.set(position);
-//        this.collision = new CollisionComponent(16, 16);
-//
-//        try {
-//            this.texture = new Texture(Gdx.files.internal("assets/items/" + itemType.toLowerCase() + ".png"));
-//        } catch (Exception e) {
-//            // Создаем текстуру-заглушку через Pixmap
-//            Pixmap pixmap = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
-//            pixmap.setColor(1, 1, 0, 1); // Желтый цвет
-//            pixmap.fill();
-//            this.texture = new Texture(pixmap);
-//            pixmap.dispose();
-//        }
-//    }
-//
-//    @Override
-//    public CollisionComponent getCollisionComponent() {
-//        return collision;
-//    }
-//
-//    @Override
-//    public Rectangle getCollisionBounds() {
-//        return collision.getBounds();
-//    }
-//
-//    public void use() {
-//        System.out.println("Использован предмет: " + itemType);
-//    }
-//
-//    public String getItemType() {
-//        return itemType;
-//    }
-//
-//    public void dispose() {
-//        if (texture != null) texture.dispose();
-//    }
-//}
-
 public class Item extends GameEntity implements Collidable {
     private String itemType;
     private String name;

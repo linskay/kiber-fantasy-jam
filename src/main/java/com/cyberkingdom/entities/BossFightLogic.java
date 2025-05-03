@@ -2,8 +2,8 @@ package com.cyberkingdom.entities;
 
 import com.cyberkingdom.gameengine.GameEngine;
 import com.cyberkingdom.items.Item;
-import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.world.LevelLoader;
+
 import java.util.ArrayList;
 import java.util.List;
 

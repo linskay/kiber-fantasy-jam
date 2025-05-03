@@ -14,10 +14,25 @@ public class EntitySystem {
         entities.add(entity);
     }
 
+    /**
+     * Удаляет сущность из системы.
+     * @param entity сущность для удаления
+     */
+    public void removeEntity(GameEntity entity) {
+        entities.remove(entity);
+    }
+
+    /**
+     * Возвращает копию списка всех сущностей.
+     * @return список сущностей
+     */
     public List<GameEntity> getEntities() {
         return new ArrayList<>(entities);
     }
 
+    /**
+     * Очищает список сущностей.
+     */
     public void clear() {
         entities.clear();
     }

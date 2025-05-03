@@ -2,6 +2,7 @@ package com.cyberkingdom.gameengine;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
@@ -11,6 +12,7 @@ import com.cyberkingdom.physics.PhysicsSystemBuilder;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.rendering.SpriteRenderer;
 import com.cyberkingdom.screens.GameScreen;
+import com.cyberkingdom.screens.MainMenuScreen;
 import com.cyberkingdom.ui.UIManager;
 import com.cyberkingdom.world.LevelLoader;
 
@@ -27,6 +29,8 @@ public class GameEngine extends ApplicationAdapter {
     private BossFightLogic bossFightLogic;
     private static final String[] MAP_PATHS = {"levels/level1.tmx"};
     private int currentLevelIndex = 0;
+    private MainMenuScreen mainMenuScreen;
+    private boolean isInMenu = true;
 
     @Override
     public void create() {
@@ -44,6 +48,7 @@ public class GameEngine extends ApplicationAdapter {
                 .createPhysicsSystem();
 
         uiManager = new UIManager(spriteRenderer);
+        mainMenuScreen = new MainMenuScreen(this);
         loadCurrentLevel();
     }
 
@@ -60,15 +65,12 @@ public class GameEngine extends ApplicationAdapter {
                     currentLevelIndex + 1
             );
 
-            // Создание игрока
             Player player = (Player) entityFactory.createPlayer(100, 200);
             entitySystem.addEntity(player);
             physicsSystem.setPlayer(player);
 
-            // Инициализация логики боя
             bossFightLogic = new BossFightLogic(null, player, this, levelLoader);
 
-            // Создание игрового экрана
             gameScreen = new GameScreen(
                     entitySystem,
                     physicsSystem,
@@ -110,9 +112,21 @@ public class GameEngine extends ApplicationAdapter {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        if (gameScreen != null) {
-            gameScreen.render(Gdx.graphics.getDeltaTime());
+        if (isInMenu) {
+            mainMenuScreen.render(Gdx.graphics.getDeltaTime());
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                Gdx.app.exit();
+            }
+        } else {
+            if (gameScreen != null) {
+                gameScreen.render(Gdx.graphics.getDeltaTime());
+            }
         }
+    }
+
+    public void startGame() {
+        isInMenu = false;
+        loadCurrentLevel();
     }
 
     @Override
@@ -126,5 +140,8 @@ public class GameEngine extends ApplicationAdapter {
 
     // Геттеры
     public EntitySystem getEntitySystem() { return entitySystem; }
+    public PhysicsSystem getPhysicsSystem() { return physicsSystem; }
+    public LevelLoader getLevelLoader() { return levelLoader; }
+    public SpriteRenderer getSpriteRenderer() { return spriteRenderer; }
     public EntityFactory getEntityFactory() { return entityFactory; }
 }

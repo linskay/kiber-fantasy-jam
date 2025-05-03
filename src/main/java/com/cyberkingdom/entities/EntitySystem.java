@@ -2,32 +2,38 @@ package com.cyberkingdom.entities;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class EntitySystem {
     private List<GameEntity> entities;
 
     public EntitySystem() {
-        entities = new ArrayList<>();
+        this.entities = new ArrayList<>();
     }
 
     public void addEntity(GameEntity entity) {
         entities.add(entity);
     }
 
-    public void update(float deltaTime) {
-        // Обновляем только активные сущности
-        entities.stream()
-                .filter(GameEntity::isActive)
-                .forEach(e -> e.update(deltaTime));
-
-        // Удаляем уничтоженные сущности
-        entities = entities.stream()
-                .filter(GameEntity::isActive)
-                .collect(Collectors.toList());
+    /**
+     * Удаляет сущность из системы.
+     * @param entity сущность для удаления
+     */
+    public void removeEntity(GameEntity entity) {
+        entities.remove(entity);
     }
 
+    /**
+     * Возвращает копию списка всех сущностей.
+     * @return список сущностей
+     */
     public List<GameEntity> getEntities() {
         return new ArrayList<>(entities);
+    }
+
+    /**
+     * Очищает список сущностей.
+     */
+    public void clear() {
+        entities.clear();
     }
 }

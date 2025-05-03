@@ -1,34 +1,73 @@
 package com.cyberkingdom.entities;
 
-public class Boss extends Enemy {
-    public enum BossType {
-        DEAD_INSIDE_DLL(500, 50, 3),
-        MINER_CAT(300, 70, 2);
+import com.badlogic.gdx.math.Rectangle;
+import com.cyberkingdom.physics.CollisionComponent;
 
-        private int health;
-        private int damage;
-        private int phases;
+public class Boss extends GameEntity implements Collidable {
+    private CollisionComponent collision;
+    private String type;
+    private int hitCount = 0;
+    private int maxHitsToDefeat = 3;
+    private float hitCooldown = 1.0f;
+    private float timeSinceLastHit = 0f;
 
-        BossType(int health, int damage, int phases) {
-            this.health = health;
-            this.damage = damage;
-            this.phases = phases;
+    public Boss(String name, float x, float y) {
+        super(name);
+        this.type = name;
+        this.position.set(x, y);
+        this.collision = new CollisionComponent(64, 64);
+    }
+
+    @Override
+    public Rectangle getCollisionBounds() {
+        return collision.getBounds();
+    }
+
+
+    @Override
+    public AnimationComponent getAnimation() {
+        return super.getAnimation();
+    }
+
+    @Override
+    public String getName() {
+        return super.getName();
+    }
+
+    public void setMaxHitsToDefeat(int hits) {
+        this.maxHitsToDefeat = hits;
+    }
+
+    protected void die() {
+        setActive(false);
+        System.out.println(getType() + " побежден!");
+    }
+
+    public void update(float deltaTime) {
+        collision.update(position);
+        if (timeSinceLastHit < hitCooldown) {
+            timeSinceLastHit += deltaTime;
         }
     }
 
-    private BossType bossType;
-    private int currentPhase;
-
-    public Boss(BossType type) {
-        super(Enemy.EnemyType.STOP_GPT); // Базовые параметры
-        this.bossType = type;
-        this.currentPhase = 1;
+    public boolean tryRegisterHit() {
+        if (!isActive()) return false;
+        if (timeSinceLastHit >= hitCooldown) {
+            hitCount++;
+            timeSinceLastHit = 0f;
+            if (hitCount >= maxHitsToDefeat) {
+                die();
+            }
+            return true;
+        }
+        return false;
     }
 
-    public void startNextPhase() {
-        if (currentPhase < bossType.phases) {
-            currentPhase++;
-            // Усиление босса в новой фазе
-        }
+    public String getType() {
+        return type;
+    }
+
+    public CollisionComponent getCollisionComponent() {
+        return collision;
     }
 }

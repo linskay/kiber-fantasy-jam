@@ -2,27 +2,31 @@ package com.cyberkingdom.ui;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.cyberkingdom.entities.Player;
+import com.cyberkingdom.rendering.SpriteRenderer;
 
 public class UIManager {
-    private SpriteBatch batch;
-    private HealthBar healthBar;
     private InventoryUI inventoryUI;
+    private HealthBar healthBar;
+    private SpriteRenderer spriteRenderer;
 
-    public UIManager() {
-        this.batch = new SpriteBatch();
-        this.healthBar = new HealthBar();
+    public UIManager(SpriteRenderer spriteRenderer) {
+        this.spriteRenderer = spriteRenderer;
         this.inventoryUI = new InventoryUI();
+        this.healthBar = new HealthBar();
     }
 
     public void render(Player player) {
-        batch.begin();
-        healthBar.render(batch, player);
-        inventoryUI.render(batch, player.getInventory());
-        batch.end();
+        SpriteBatch batch = spriteRenderer.getBatch();
+
+        // Рендерим здоровье
+        healthBar.render(player, batch);
+
+        // Рендерим инвентарь
+        inventoryUI.render(player, batch);
     }
 
     public void dispose() {
-        batch.dispose();
+        inventoryUI.dispose();
         healthBar.dispose();
     }
 }

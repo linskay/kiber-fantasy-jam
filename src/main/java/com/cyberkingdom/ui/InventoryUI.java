@@ -1,41 +1,30 @@
 package com.cyberkingdom.ui;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.cyberkingdom.items.Inventory;
-import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.cyberkingdom.entities.Player;
 
 public class InventoryUI {
-    private SpriteManager spriteManager;
-    private float slotSize = 40;
-    private float padding = 5;
+    private ShapeRenderer shapeRenderer;
 
     public InventoryUI() {
-        // Инициализация менеджера спрайтов
-        spriteManager = new SpriteManager();
+        this.shapeRenderer = new ShapeRenderer();
     }
 
-    public void render(SpriteBatch batch, Inventory inventory) {
-        float startX = 20;
-        float startY = 50;
+    public void render(Player player, SpriteBatch batch) {
+        // Рисуем инвентарь
+        shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(Color.GREEN);
+        shapeRenderer.rect(10, 10, 200, 50);
+        shapeRenderer.end();
 
-        for (int i = 0; i < inventory.getCapacity(); i++) {
-            // Отрисовка слота
-            batch.draw(spriteManager.getSlotTexture(),
-                    startX + i * (slotSize + padding),
-                    startY,
-                    slotSize,
-                    slotSize);
+        // Здесь можно добавить отрисовку предметов инвентаря
+        // используя batch
+    }
 
-            // Отрисовка предмета
-            if (inventory.getItem(i) != null) {
-                TextureRegion itemTexture = spriteManager.getItemTexture(inventory.getItem(i).getType());
-                batch.draw(itemTexture,
-                        startX + i * (slotSize + padding) + 4,
-                        startY + 4,
-                        slotSize - 8,
-                        slotSize - 8);
-            }
-        }
+    public void dispose() {
+        shapeRenderer.dispose();
     }
 }

@@ -1,39 +1,51 @@
 package com.cyberkingdom.entities;
 
-public class Enemy extends GameEntity {
+import com.badlogic.gdx.math.Rectangle;
+import com.cyberkingdom.physics.CollisionComponent;
+
+public class Enemy extends GameEntity implements Collidable {
     public enum EnemyType {
-        TROLL_BOT(50, 150),
-        VIRUS_FLYING(30, 200),
-        STOP_GPT(80, 100);
-
-        private int health;
-        private int damage;
-
-        EnemyType(int health, int damage) {
-            this.health = health;
-            this.damage = damage;
-        }
+        TROLL_BOT,
+        GOBLIN,
+        CYBER_DEMON
     }
 
-    private EnemyType enemyType;
-    private int health;
-    private int damage;
+    private EnemyType type;
+    private CollisionComponent collision;
 
-    public Enemy(EnemyType type) {
-        super(type.name().toLowerCase(), EntityType.ENEMY);
-        this.enemyType = type;
-        this.health = type.health;
-        this.damage = type.damage;
+    public Enemy(EnemyType type, float x, float y) {
+        super(type.name());
+        this.type = type;
+        this.position.set(x, y);
+        this.collision = new CollisionComponent(32, 32); // Размер коллизии
     }
 
-    public void takeDamage(int amount) {
-        health -= amount;
-        if (health <= 0) {
-            destroy();
-        }
+    @Override
+    public CollisionComponent getCollisionComponent() {
+        return collision;
     }
 
-    public void attack(Player player) {
-        // Логика атаки игрока
+    @Override
+    public Rectangle getCollisionBounds() {
+        return collision.getBounds();
+    }
+
+    @Override
+    public AnimationComponent getAnimation() {
+        return super.getAnimation();
+    }
+
+    @Override
+    public String getName() {
+        return super.getName();
+    }
+
+    public EnemyType getEnemyType() {
+        return type;
+    }
+
+    public void update(float deltaTime) {
+        collision.update(position);
+        // Базовая логика движения врагов
     }
 }

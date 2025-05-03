@@ -1,35 +1,40 @@
 package com.cyberkingdom.input;
 
-import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.cyberkingdom.entities.Player;
 
-public abstract class InputHandler implements InputProcessor {
-    private Player player;
+public class InputHandler {
+    private final Player player;
+    private final float speed = 200f;
+    private boolean jumpPressed = false;
 
     public InputHandler(Player player) {
         this.player = player;
     }
 
-    @Override
-    public boolean keyDown(int keycode) {
-        switch (keycode) {
-            case com.badlogic.gdx.Input.Keys.A:
-            case com.badlogic.gdx.Input.Keys.LEFT:
-                player.move(-1);
-                break;
-            case com.badlogic.gdx.Input.Keys.D:
-            case com.badlogic.gdx.Input.Keys.RIGHT:
-                player.move(1);
-                break;
-            case com.badlogic.gdx.Input.Keys.SPACE:
-                player.jump();
-                break;
-            case com.badlogic.gdx.Input.Keys.E:
-                player.useItem(0); // Использовать первый предмет
-                break;
-        }
-        return true;
+    public void update(float deltaTime) {
+        handleMovement();
+        handleJump();
     }
 
-    // ... другие методы интерфейса
+    private void handleMovement() {
+        float moveX = 0;
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) moveX -= speed;
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) moveX += speed;
+
+        player.getVelocity().x = moveX;
+    }
+
+    private void handleJump() {
+        if (Gdx.input.isKeyPressed(Input.Keys.SPACE) && !jumpPressed) {
+            if (player.isOnGround()) {
+                player.getVelocity().y = player.getJumpVelocity();
+                player.setJumping(true);
+                jumpPressed = true;
+            }
+        } else if (!Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+            jumpPressed = false;
+        }
+    }
 }

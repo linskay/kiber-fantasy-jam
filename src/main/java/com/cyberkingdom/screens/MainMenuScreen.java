@@ -39,12 +39,10 @@ public class MainMenuScreen implements Screen {
     private final float GLOW_SPEED = 3f;
     private final float SCROLL_SPEED = 300f;
 
-    // Стиль описания
     private static final Color DESC_COLOR = Color.WHITE;
     private static final Color DESC_BORDER = Color.BLACK;
     private static final float DESC_Y_OFFSET = -20f;
 
-    // Неоновые эффекты
     private static final Color NEON_CORE = new Color(0.1f, 0.9f, 1f, 1f);
     private static final Color NEON_GLOW = new Color(0.3f, 0.6f, 1f, 0.3f);
     private static final int GLOW_LAYERS = 5;
@@ -151,7 +149,7 @@ public class MainMenuScreen implements Screen {
     private void setupUI() {
         stage.addActor(new Image(backgroundTexture));
 
-        Label titleLabel = new Label("404: Кибер Сказка NOT Found", new Label.LabelStyle(titleFont, Color.WHITE));
+        Label titleLabel = new Label("", new Label.LabelStyle(titleFont, Color.WHITE));
         titleLabel.setPosition(Gdx.graphics.getWidth()/2f, Gdx.graphics.getHeight() - 150, Align.center);
         stage.addActor(titleLabel);
 
@@ -277,12 +275,19 @@ public class MainMenuScreen implements Screen {
     }
 
     private void handleSelection() {
+        selectSound.play(0.7f);
         switch(selectedIndex) {
             case 0:
                 engine.startGame();
                 break;
+            case 1:
+                engine.showAchievementsScreen();
+                break;
             case 2:
                 engine.showStoryScreen();
+                break;
+            case 3:
+                engine.showCreditsScreen();
                 break;
             case 4:
                 Gdx.app.exit();

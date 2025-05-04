@@ -1,71 +1,76 @@
 package com.cyberkingdom.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
-import com.cyberkingdom.entities.*;
+import com.cyberkingdom.entities.EntitySystem;
+import com.cyberkingdom.entities.GameEntity;
+import com.cyberkingdom.entities.Player;
 import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.rendering.SpriteRenderer;
-import com.cyberkingdom.ui.UIManager;
 import com.cyberkingdom.world.LevelLoader;
-import java.util.HashMap;
-import java.util.Map;
 
-public class GameScreen {
-    private final ShapeRenderer platformRenderer = new ShapeRenderer();
-    private Texture currentBackground;
-    private Map<Integer, Texture> backgroundTextures = new HashMap<>();
-    private EntitySystem entitySystem;
-    private PhysicsSystem physicsSystem;
-    private SpriteRenderer spriteRenderer;
-    private OrthogonalTiledMapRenderer mapRenderer;
-    private OrthographicCamera camera;
-    private ShapeRenderer shapeRenderer;
-    private Player player;
-
-    private Texture backgroundTexture;
-
-    public GameScreen() {
-        // Загрузка фона
-        backgroundTexture = new Texture(Gdx.files.internal("assets/ui/background.png"));
-    }
+public class GameScreen implements Screen {
+    private final EntitySystem entitySystem;
+    private final PhysicsSystem physicsSystem;
+    private final SpriteRenderer spriteRenderer;
+    private final OrthographicCamera camera;
+    private final Player player;
+    private final Texture background;
+    private final ShapeRenderer shapeRenderer = new ShapeRenderer();
 
     public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem,
                       LevelLoader levelLoader, SpriteRenderer spriteRenderer,
-                      UIManager uiManager, BossFightLogic bossFightLogic) {
+                      Object uiManager, Object bossFightLogic) {
         this.entitySystem = entitySystem;
         this.physicsSystem = physicsSystem;
         this.spriteRenderer = spriteRenderer;
 
-        // Инициализация фона
-        backgroundTextures.put(1, new Texture(Gdx.files.internal("assets/ui/background.png")));
-        currentBackground = backgroundTextures.get(1);
+        // Загрузка фона
+        background = new Texture(Gdx.files.internal("assets/ui/background.png"));
 
-        // Инициализация камеры
+        // Настройка камеры
         camera = new OrthographicCamera(1200, 800);
         camera.setToOrtho(false);
 
         // Поиск игрока
+        Player foundPlayer = null;
         for (GameEntity entity : entitySystem.getEntities()) {
             if (entity instanceof Player) {
-                player = (Player) entity;
+                foundPlayer = (Player) entity;
                 break;
             }
         }
+        player = foundPlayer;
     }
 
-    public void render(float deltaTime) {
-        updateCamera(deltaTime);
-        renderBackground();
-        renderPlatforms();
+    @Override
+    public void render(float delta) {
+        updateCamera(delta);
 
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // Рендер фона
+        spriteRenderer.getBatch().begin();
+        spriteRenderer.getBatch().draw(background, 0, 0, 1200, 800);
+        spriteRenderer.getBatch().end();
+
+        // Рендер платформ
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0.2f, 0.6f, 0.2f, 1);
+        for (Rectangle platform : physicsSystem.getPlatforms()) {
+            shapeRenderer.rect(platform.x, platform.y, platform.width, platform.height);
+        }
+        shapeRenderer.end();
+
+        // Рендер сущностей
         spriteRenderer.begin();
         for (GameEntity entity : entitySystem.getEntities()) {
             if (entity.isActive()) {
@@ -75,39 +80,43 @@ public class GameScreen {
         spriteRenderer.end();
     }
 
-    private void renderBackground() {
-        if (currentBackground != null) {
-            spriteRenderer.getBatch().begin();
-            spriteRenderer.getBatch().draw(currentBackground, 0, 0, 1200, 800);
-            spriteRenderer.getBatch().end();
-        }
-    }
-
-    private void updateCamera(float deltaTime) {
+    private void updateCamera(float delta) {
         if (player != null) {
-            camera.position.set(player.getPosition().x, player.getPosition().y + 200, 0);
+            camera.position.set(
+                    MathUtils.lerp(camera.position.x, player.getPosition().x, delta * 5),
+                    MathUtils.lerp(camera.position.y, player.getPosition().y + 200, delta * 5),
+                    0
+            );
             camera.update();
         }
     }
 
-    private void renderPlatforms() {
-        platformRenderer.setProjectionMatrix(camera.combined);
-        platformRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        platformRenderer.setColor(0.2f, 0.6f, 0.2f, 1); // Зеленый цвет платформ
-
-        for (Rectangle platform : physicsSystem.getPlatforms()) {
-            platformRenderer.rect(
-                    platform.x,
-                    platform.y,
-                    platform.width,
-                    platform.height
-            );
-        }
-
-        platformRenderer.end();
+    @Override
+    public void resize(int width, int height) {
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.update();
     }
 
+    @Override
     public void dispose() {
-        currentBackground.dispose();
+        background.dispose();
+        shapeRenderer.dispose();
+    }
+
+    @Override
+    public void show() {
+    }
+
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
     }
 }

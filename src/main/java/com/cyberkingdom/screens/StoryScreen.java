@@ -5,8 +5,7 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.*;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
@@ -25,10 +24,17 @@ public class StoryScreen implements Screen {
     private float scrollY = 0;
     private final String storyText;
     private GlyphLayout layout;
-    private float textHeight;
-    private final float MARGIN = 150f;
-    private final float SCROLL_SPEED = 200f;
+    private final float MARGIN_TOP = 120f;
+    private final float MARGIN_BOTTOM = 120f;
+    private final float BUTTON_HEIGHT = 80f;
+    private final float MARGIN_SIDES = 100f;
+    private final float SCROLL_SPEED = 250f;
     private final Color SHADOW_COLOR = new Color(0, 0, 0, 0.7f);
+    private float maxScroll;
+    private final float ARROW_OFFSET = 70f;
+    private float cursorAlpha = 1f;
+    private float cursorTimer = 0f;
+    private final float EXTRA_SCROLL_SPACE = 100f;
 
     public StoryScreen(GameEngine engine) {
         this.engine = engine;
@@ -58,73 +64,88 @@ public class StoryScreen implements Screen {
 
     private void initialize() {
         batch = new SpriteBatch();
-        camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        camera.setToOrtho(false);
+        camera = new OrthographicCamera();
+        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         stage = new Stage();
 
+        font.getData().setScale(0.75f);
         layout = new GlyphLayout(font, storyText, Color.WHITE,
-                Gdx.graphics.getWidth() - (int)(MARGIN * 2), Align.center, true);
-        textHeight = layout.height;
+                Gdx.graphics.getWidth() - (int)(MARGIN_SIDES * 2), Align.center, true);
+
+        float availableHeight = Gdx.graphics.getHeight() - MARGIN_TOP - BUTTON_HEIGHT + EXTRA_SCROLL_SPACE;
+        maxScroll = Math.min(-(layout.height - availableHeight), EXTRA_SCROLL_SPACE);
 
         createBackButton();
-        Gdx.input.setInputProcessor(new InputMultiplexer(stage, new InputAdapter() {
-            @Override
-            public boolean scrolled(float amountX, float amountY) {
-                scrollY += amountY * SCROLL_SPEED;
-                return true;
-            }
-        }));
+        setupInput();
+    }
+
+    private void setupInput() {
+        Gdx.input.setInputProcessor(new InputMultiplexer(
+                new InputAdapter() {
+                    @Override
+                    public boolean keyDown(int keycode) {
+                        if (keycode == Input.Keys.SPACE || keycode == Input.Keys.ESCAPE) {
+                            goBack();
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    @Override
+                    public boolean scrolled(float amountX, float amountY) {
+                        scrollY -= amountY * SCROLL_SPEED * 2f;
+                        scrollY = MathUtils.clamp(scrollY, maxScroll - EXTRA_SCROLL_SPACE, EXTRA_SCROLL_SPACE);
+                        return true;
+                    }
+                },
+                stage
+        ));
     }
 
     private void createBackButton() {
         Label.LabelStyle style = new Label.LabelStyle(font, Color.WHITE);
         Label backLabel = new Label("[НАЗАД]", style);
+
+        backLabel.setSize(200, 60);
         backLabel.setPosition(
                 Gdx.graphics.getWidth()/2f,
-                80,
-                Align.center
+                BUTTON_HEIGHT,
+                Align.center | Align.bottom
         );
 
         backLabel.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                selectSound.play(0.7f);
-                engine.showMainMenu();
+                goBack();
             }
         });
 
         stage.addActor(backLabel);
     }
 
+    private void goBack() {
+        selectSound.play(0.7f);
+        engine.showMainMenu();
+    }
+
     @Override
     public void render(float delta) {
         handleInput(delta);
+        updateCursor(delta);
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        // Фон
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // Затемнение
         batch.setColor(SHADOW_COLOR);
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch.setColor(Color.WHITE);
 
-        // Текст с тенью
-        font.setColor(0, 0, 0, 0.5f);
-        font.draw(batch, layout, MARGIN + 2, Gdx.graphics.getHeight() - MARGIN + scrollY - 2);
-        font.setColor(1, 1, 1, 1);
-        font.draw(batch, layout, MARGIN, Gdx.graphics.getHeight() - MARGIN + scrollY);
-
-        // Курсор
-        batch.draw(cursorTexture,
-                Gdx.input.getX() - 16,
-                Gdx.graphics.getHeight() - Gdx.input.getY() - 16,
-                32, 32);
-
+        drawTextWithShadow();
+        drawCursor();
         drawScrollArrows();
         batch.end();
 
@@ -132,31 +153,44 @@ public class StoryScreen implements Screen {
         stage.draw();
     }
 
-    private void handleInput(float delta) {
-        // Прокрутка клавишами
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) scrollY += SCROLL_SPEED * delta;
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) scrollY -= SCROLL_SPEED * delta;
+    private void drawTextWithShadow() {
+        float baseY = Gdx.graphics.getHeight() - MARGIN_TOP + scrollY + EXTRA_SCROLL_SPACE;
+        font.setColor(0, 0, 0, 0.7f);
+        font.draw(batch, layout, MARGIN_SIDES + 2, baseY - 2);
+        font.setColor(1, 1, 1, 1);
+        font.draw(batch, layout, MARGIN_SIDES, baseY);
+    }
 
-        // Ограничение прокрутки
-        scrollY = MathUtils.clamp(scrollY,
-                -textHeight + Gdx.graphics.getHeight() - MARGIN * 2,
-                0
-        );
+    private void handleInput(float delta) {
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) scrollY -= SCROLL_SPEED * delta;
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) scrollY += SCROLL_SPEED * delta;
+        scrollY = MathUtils.clamp(scrollY, maxScroll - EXTRA_SCROLL_SPACE, EXTRA_SCROLL_SPACE);
+    }
+
+    private void updateCursor(float delta) {
+        cursorTimer += delta * 5;
+        cursorAlpha = 0.4f + (MathUtils.sin(cursorTimer) + 1f) / 3f;
+    }
+
+    private void drawCursor() {
+        batch.setColor(1, 1, 1, cursorAlpha);
+        batch.draw(cursorTexture,
+                Gdx.input.getX(),
+                Gdx.graphics.getHeight() - Gdx.input.getY() - cursorTexture.getHeight(),
+                cursorTexture.getWidth(),
+                cursorTexture.getHeight());
+        batch.setColor(Color.WHITE);
     }
 
     private void drawScrollArrows() {
-        batch.setColor(1, 1, 1, 0.8f);
-        if (scrollY < 0) {
-            font.draw(batch, "▲",
-                    Gdx.graphics.getWidth()/2f - 10,
-                    Gdx.graphics.getHeight() - 80
-            );
+        float rightEdge = Gdx.graphics.getWidth() - ARROW_OFFSET;
+        batch.setColor(1, 1, 1, 0.9f);
+
+        if (scrollY > (maxScroll - EXTRA_SCROLL_SPACE)) {
+            font.draw(batch, "▲", rightEdge - 25, Gdx.graphics.getHeight() - ARROW_OFFSET);
         }
-        if (scrollY > -textHeight + Gdx.graphics.getHeight() - MARGIN * 2) {
-            font.draw(batch, "▼",
-                    Gdx.graphics.getWidth()/2f - 10,
-                    100
-            );
+        if (scrollY < EXTRA_SCROLL_SPACE) {
+            font.draw(batch, "▼", rightEdge - 25, ARROW_OFFSET + 40);
         }
         batch.setColor(Color.WHITE);
     }
@@ -165,16 +199,18 @@ public class StoryScreen implements Screen {
     public void resize(int width, int height) {
         camera.setToOrtho(false, width, height);
         stage.getViewport().update(width, height, true);
+        font.getData().setScale(0.75f * (width/1280f));
     }
 
     @Override
     public void dispose() {
         batch.dispose();
         stage.dispose();
+        font.getData().setScale(1.0f);
     }
 
     @Override public void show() {}
+    @Override public void hide() { engine.resumeMusic(); }
     @Override public void pause() {}
     @Override public void resume() {}
-    @Override public void hide() {}
 }

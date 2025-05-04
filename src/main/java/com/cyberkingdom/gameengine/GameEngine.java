@@ -147,6 +147,14 @@ public class GameEngine extends Game {
         setScreen(mainMenuScreen);
     }
 
+    public void showAchievementsScreen() {
+        setScreen(new AchievementsScreen(this));
+    }
+
+    public void showCreditsScreen() {
+        setScreen(new CreditsScreen(this));
+    }
+
     @Override
     public void dispose() {
         super.dispose();
@@ -157,7 +165,6 @@ public class GameEngine extends Game {
         storyScreen.dispose();
     }
 
-    // Геттеры
     public EntitySystem getEntitySystem() { return entitySystem; }
     public PhysicsSystem getPhysicsSystem() { return physicsSystem; }
     public LevelLoader getLevelLoader() { return levelLoader; }

@@ -1,26 +1,25 @@
 package com.cyberkingdom.screens;
 
-import com.badlogic.gdx.*;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.cyberkingdom.gameengine.GameEngine;
 
 public class MainMenuScreen implements Screen {
     private final GameEngine engine;
     private Stage stage;
-    private BitmapFont titleFont;
     private BitmapFont menuFont;
     private BitmapFont descFont;
     private MenuItem[] menuItems;
@@ -68,7 +67,21 @@ public class MainMenuScreen implements Screen {
 
         loadResources();
         initializeMenuItems();
-        initializeFonts();
+        menuFont = engine.getMenuFont(); // Используем шрифт из GameEngine для заголовков
+
+        // Инициализация шрифта для описания
+        try {
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
+            FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            params.size = 20; // Размер шрифта для описания
+            params.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<> ";
+            descFont = generator.generateFont(params);
+            generator.dispose();
+        } catch (Exception e) {
+            Gdx.app.error("MainMenu", "Failed to initialize description font, falling back to default", e);
+            descFont = new BitmapFont();
+        }
+
         setupUI();
         setupAudio();
     }
@@ -113,57 +126,17 @@ public class MainMenuScreen implements Screen {
         };
     }
 
-    private void initializeFonts() {
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(
-                Gdx.files.internal("assets/fonts/arial.ttf")
-        );
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<>";
-
-        FreeTypeFontGenerator.FreeTypeFontParameter menuParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        menuParams.size = 32;
-        menuParams.color = Color.WHITE;
-        menuParams.borderWidth = 3;
-        menuParams.borderColor = NEON_CORE;
-        menuParams.characters = characters;
-        menuFont = generator.generateFont(menuParams);
-
-        FreeTypeFontGenerator.FreeTypeFontParameter descParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        descParams.size = 20;
-        descParams.color = DESC_COLOR;
-        descParams.borderWidth = 1;
-        descParams.borderColor = DESC_BORDER;
-        descParams.characters = characters;
-        descFont = generator.generateFont(descParams);
-
-        FreeTypeFontGenerator.FreeTypeFontParameter titleParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        titleParams.size = 64;
-        titleParams.borderWidth = 5;
-        titleParams.color = Color.WHITE;
-        titleParams.borderColor = NEON_CORE;
-        titleParams.characters = characters;
-        titleFont = generator.generateFont(titleParams);
-
-        generator.dispose();
-    }
-
     private void setupUI() {
         stage.addActor(new Image(backgroundTexture));
 
-        Label titleLabel = new Label("", new Label.LabelStyle(titleFont, Color.WHITE));
-        titleLabel.setPosition(Gdx.graphics.getWidth()/2f, Gdx.graphics.getHeight() - 150, Align.center);
-        stage.addActor(titleLabel);
-
         float startY = Gdx.graphics.getHeight()/2f;
         for(int i = 0; i < menuItems.length; i++) {
-            Label itemLabel = new Label(menuItems[i].title, new Label.LabelStyle(menuFont, Color.WHITE));
-            itemLabel.setPosition(Gdx.graphics.getWidth()/2f, startY - i*ITEM_PADDING, Align.center);
             menuItems[i].bounds.set(
                     Gdx.graphics.getWidth()/2f - 280,
                     startY - i*ITEM_PADDING - 30,
                     560,
                     60
             );
-            stage.addActor(itemLabel);
         }
     }
 
@@ -248,18 +221,58 @@ public class MainMenuScreen implements Screen {
             Batch batch = stage.getBatch();
             batch.begin();
 
-            // Неоновое свечение
-            descFont.setColor(0.1f, 0.9f, 1f, descAlpha * 0.4f);
-            for(int i = -2; i <= 2; i++) {
-                descFont.draw(batch, text, currentScrollX + i, yPos + i);
-            }
+            // Исправленный радужный эффект
+            float hue = (glowTimer * 0.5f) % 1f;
+            Color rainbowColor = new Color();
+            rainbowColor.fromHsv(hue * 360f, 0.8f, 1f);
+
+            // Тень
+            descFont.setColor(0, 0, 0, descAlpha * 0.7f);
+            descFont.draw(batch, text, currentScrollX + 2, yPos - 2);
 
             // Основной текст
-            descFont.setColor(1, 1, 1, descAlpha);
+            descFont.setColor(rainbowColor.r, rainbowColor.g, rainbowColor.b, descAlpha);
             descFont.draw(batch, text, currentScrollX, yPos);
 
             batch.end();
         }
+    }
+
+    private void drawMenuItems() {
+        Batch batch = stage.getBatch();
+        batch.begin();
+
+        float startY = Gdx.graphics.getHeight()/2f;
+        for(int i = 0; i < menuItems.length; i++) {
+            String text = menuItems[i].title;
+            GlyphLayout layout = new GlyphLayout(menuFont, text);
+            float xPos = Gdx.graphics.getWidth()/2f - layout.width/2;
+            float yPos = startY - i*ITEM_PADDING;
+
+            // Неоновый стиль для заголовков-кнопок
+            menuFont.setColor(0.1f, 0.9f, 1f, 1f); // Свечение
+            for(int dx = -2; dx <= 2; dx++) {
+                for(int dy = -2; dy <= 2; dy++) {
+                    menuFont.draw(batch, text, xPos + dx, yPos + dy);
+                }
+            }
+
+            // Неоновая обводка
+            menuFont.setColor(NEON_CORE);
+            for(int dx = -1; dx <= 1; dx++) {
+                for(int dy = -1; dy <= 1; dy++) {
+                    if(dx != 0 || dy != 0) {
+                        menuFont.draw(batch, text, xPos + dx, yPos + dy);
+                    }
+                }
+            }
+
+            // Основной текст
+            menuFont.setColor(Color.WHITE);
+            menuFont.draw(batch, text, xPos, yPos);
+        }
+
+        batch.end();
     }
 
     private void drawCursor() {
@@ -307,6 +320,7 @@ public class MainMenuScreen implements Screen {
 
         shapeRenderer.setProjectionMatrix(stage.getCamera().combined);
         drawNeonFrame(menuItems[selectedIndex].bounds);
+        drawMenuItems();
         drawScrollingText();
         drawCursor();
     }
@@ -319,8 +333,6 @@ public class MainMenuScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
-        titleFont.dispose();
-        menuFont.dispose();
         descFont.dispose();
         if(cursorTexture != null) cursorTexture.dispose();
         if(backgroundTexture != null) backgroundTexture.dispose();
@@ -335,10 +347,6 @@ public class MainMenuScreen implements Screen {
 
     public void pauseMusic() {
         if (menuMusic != null) menuMusic.pause();
-    }
-
-    public BitmapFont getMenuFont() {
-        return menuFont;
     }
 
     public Sound getSelectSound() {

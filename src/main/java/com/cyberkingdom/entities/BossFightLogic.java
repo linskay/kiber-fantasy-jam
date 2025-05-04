@@ -5,7 +5,9 @@ import com.cyberkingdom.items.Item;
 import com.cyberkingdom.world.LevelLoader;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class BossFightLogic {
     private GameEngine gameEngine;
@@ -26,7 +28,6 @@ public class BossFightLogic {
     public void update(float deltaTime) {
         if (levelCompleted) return;
 
-        // Создаем копию списка для безопасной итерации
         List<GameEntity> entitiesCopy = new ArrayList<>(gameEngine.getEntitySystem().getEntities());
         checkItemCollisions(entitiesCopy);
 
@@ -41,8 +42,15 @@ public class BossFightLogic {
     private void checkItemCollisions(List<GameEntity> entities) {
         for (GameEntity entity : entities) {
             if (entity instanceof Item && entity.isActive()) {
+                Item item = (Item) entity;
                 if (checkCollision(player, entity)) {
-                    collectItem((Item)entity);
+                    if (item.getItemType().equals("COIN")) {
+                        player.addCoin();
+                        entity.setActive(false);
+                        gameEngine.getEntitySystem().removeEntity(entity);
+                    } else {
+                        collectItem(item);
+                    }
                 }
             }
         }
@@ -57,9 +65,15 @@ public class BossFightLogic {
         collectedItems++;
         player.getInventory().addItem(item);
 
-        if (levelLoader != null && levelLoader.getLevelNumber() == 1 &&
-                collectedItems >= levelLoader.getTotalItems() &&
-                !finalBossSpawned) {
+        // Проверяем, собраны ли 4 разных предмета
+        Set<String> uniqueItems = new HashSet<>();
+        for (Item invItem : player.getInventory().getItems()) {
+            if (!invItem.getItemType().equals("COIN")) {
+                uniqueItems.add(invItem.getItemType());
+            }
+        }
+
+        if (uniqueItems.size() >= 4 && !finalBossSpawned) {
             spawnFinalBoss();
         }
     }
@@ -74,11 +88,12 @@ public class BossFightLogic {
 
     private void spawnFinalBoss() {
         if (levelLoader.getLevelNumber() == 1) {
-            boss = (Boss)gameEngine.getEntityFactory().createBoss(
+            boss = (Boss) gameEngine.getEntityFactory().createBoss(
                     "WITCH_VPN",
                     player.getPosition().x + 300,
                     player.getPosition().y + 100
             );
+            boss.setTarget(player);
             gameEngine.getEntitySystem().addEntity(boss);
             finalBossSpawned = true;
         }

@@ -1,111 +1,140 @@
 package com.cyberkingdom.screens;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
-import com.cyberkingdom.entities.EntitySystem;
-import com.cyberkingdom.entities.GameEntity;
-import com.cyberkingdom.entities.Player;
+import com.cyberkingdom.entities.*;
+import com.cyberkingdom.items.Item;
 import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.rendering.SpriteRenderer;
+import com.cyberkingdom.ui.UIManager;
 import com.cyberkingdom.world.LevelLoader;
 
-public class GameScreen implements Screen {
-    private final EntitySystem entitySystem;
-    private final PhysicsSystem physicsSystem;
-    private final SpriteRenderer spriteRenderer;
-    private final OrthographicCamera camera;
-    private final Player player;
-    private final Texture background;
-    private final ShapeRenderer shapeRenderer = new ShapeRenderer();
 
-    public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem,
-                      LevelLoader levelLoader, SpriteRenderer spriteRenderer,
-                      Object uiManager, Object bossFightLogic) {
+public class GameScreen implements com.badlogic.gdx.Screen {
+    private static final float MIN_WORLD_Y = 150f;
+    private EntitySystem entitySystem;
+    private PhysicsSystem physicsSystem;
+    private LevelLoader levelLoader;
+    private SpriteRenderer spriteRenderer;
+    private UIManager uiManager;
+    private OrthographicCamera camera;
+    private Player player;
+    private BossFightLogic bossFightLogic;
+    private Texture background;
+
+    public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem, LevelLoader levelLoader,
+                      SpriteRenderer spriteRenderer, UIManager uiManager, BossFightLogic bossFightLogic) {
         this.entitySystem = entitySystem;
         this.physicsSystem = physicsSystem;
+        this.levelLoader = levelLoader;
         this.spriteRenderer = spriteRenderer;
+        this.uiManager = uiManager;
+        this.bossFightLogic = bossFightLogic;
+        this.camera = new OrthographicCamera();
+        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        findPlayer();
 
-        // Загрузка фона
-        background = new Texture(Gdx.files.internal("assets/ui/background.png"));
+        if (player != null) {
+            camera.position.set(
+                    player.getPosition().x,
+                    Math.max(player.getPosition().y, MIN_WORLD_Y),
+                    0
+            );
+        } else {
+            camera.position.set(100, MIN_WORLD_Y, 0);
+        }
+        camera.update();
 
-        // Настройка камеры
-        camera = new OrthographicCamera(1200, 800);
-        camera.setToOrtho(false);
+        try {
+            background = new Texture(Gdx.files.internal("assets/ui/background.png"));
+        } catch (Exception e) {
+            Gdx.app.error("GameScreen", "Failed to load background", e);
+        }
+    }
 
-        // Поиск игрока
-        Player foundPlayer = null;
+    private void findPlayer() {
         for (GameEntity entity : entitySystem.getEntities()) {
             if (entity instanceof Player) {
-                foundPlayer = (Player) entity;
+                this.player = (Player) entity;
                 break;
             }
         }
-        player = foundPlayer;
     }
 
     @Override
-    public void render(float delta) {
-        updateCamera(delta);
-
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
+    public void render(float deltaTime) {
+        Gdx.gl.glClearColor(0, 0, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Рендер фона
-        spriteRenderer.getBatch().begin();
-        spriteRenderer.getBatch().draw(background, 0, 0, 1200, 800);
-        spriteRenderer.getBatch().end();
-
-        // Рендер платформ
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0.2f, 0.6f, 0.2f, 1);
-        for (Rectangle platform : physicsSystem.getPlatforms()) {
-            shapeRenderer.rect(platform.x, platform.y, platform.width, platform.height);
-        }
-        shapeRenderer.end();
-
-        // Рендер сущностей
-        spriteRenderer.begin();
-        for (GameEntity entity : entitySystem.getEntities()) {
-            if (entity.isActive()) {
-                spriteRenderer.render(entity);
-            }
-        }
-        spriteRenderer.end();
-    }
-
-    private void updateCamera(float delta) {
         if (player != null) {
             camera.position.set(
-                    MathUtils.lerp(camera.position.x, player.getPosition().x, delta * 5),
-                    MathUtils.lerp(camera.position.y, player.getPosition().y + 200, delta * 5),
+                    player.getPosition().x,
+                    Math.max(player.getPosition().y, MIN_WORLD_Y),
                     0
             );
-            camera.update();
+        }
+        camera.update();
+
+        SpriteBatch gameBatch = spriteRenderer.getBatch();
+        gameBatch.setProjectionMatrix(camera.combined);
+        gameBatch.begin();
+
+        if (background != null) {
+            gameBatch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        }
+
+        for (Platform platform : levelLoader.getPlatforms()) {
+            if (platform.getTexture() != null) {
+                Rectangle rect = platform.getRectangle();
+                gameBatch.draw(platform.getTexture(), rect.x, rect.y, rect.width, rect.height);
+            }
+        }
+
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (entity.isActive()) {
+                if (entity instanceof Item) {
+                    ((Item) entity).render(gameBatch);
+                } else if (!(entity instanceof Platform)) {
+                    spriteRenderer.render(entity);
+                }
+            }
+        }
+
+        gameBatch.end();
+
+        if (player != null) {
+            uiManager.render(player);
+        }
+
+        physicsSystem.update(deltaTime);
+        if (bossFightLogic != null) {
+            bossFightLogic.update(deltaTime);
         }
     }
 
     @Override
     public void resize(int width, int height) {
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
+        camera.setToOrtho(false, width, height);
         camera.update();
     }
 
     @Override
     public void dispose() {
-        background.dispose();
-        shapeRenderer.dispose();
+        if (background != null) {
+            background.dispose();
+        }
     }
 
     @Override
     public void show() {
+    }
+
+    @Override
+    public void hide() {
     }
 
     @Override
@@ -114,9 +143,5 @@ public class GameScreen implements Screen {
 
     @Override
     public void resume() {
-    }
-
-    @Override
-    public void hide() {
     }
 }

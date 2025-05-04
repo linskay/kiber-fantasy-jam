@@ -2,7 +2,9 @@ package com.cyberkingdom.physics;
 
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.cyberkingdom.entities.Boss;
 import com.cyberkingdom.entities.EntitySystem;
+import com.cyberkingdom.entities.GameEntity;
 import com.cyberkingdom.entities.Player;
 import com.cyberkingdom.input.InputHandler;
 
@@ -10,74 +12,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PhysicsSystem {
-    private List<Rectangle> platforms = new ArrayList<>();
-    private float gravity = -900f;
-    private Player player;
+    private EntitySystem entitySystem;
     private InputHandler inputHandler;
+    private Player player;
+    private List<Rectangle> platforms;
+    private float gravity = -980f; // Гравитация
+    private static final float MIN_Y_POSITION = 150f; // Минимальная высота игрока
+    private boolean isPlayerInitialized = false;
+
+    public PhysicsSystem(EntitySystem entitySystem) {
+        this.entitySystem = entitySystem;
+        this.platforms = new ArrayList<>();
+    }
+
+    private void initializePlayer() {
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (entity instanceof Player) {
+                this.player = (Player) entity;
+                this.inputHandler = new InputHandler(player);
+                System.out.println("Игрок инициализирован в PhysicsSystem: " + player);
+                isPlayerInitialized = true;
+                break;
+            }
+        }
+        if (!isPlayerInitialized) {
+            System.err.println("Игрок не инициализирован в PhysicsSystem");
+        }
+    }
 
     public void setPlayer(Player player) {
         this.player = player;
         this.inputHandler = new InputHandler(player);
-    }
-
-    public PhysicsSystem(EntitySystem entitySystem, float worldWidth, float worldHeight) {
-    }
-
-    public void update(float deltaTime) {
-        if (inputHandler != null) {
-            inputHandler.update(deltaTime);
-        }
-
-        if (player != null && player.isActive()) {
-            // Обновление физики игрока
-            Vector2 velocity = player.getVelocity();
-            Vector2 position = player.getPosition();
-
-            // Применение гравитации
-            velocity.y += gravity * deltaTime;
-
-            // Обновление позиции
-            position.mulAdd(velocity, deltaTime);
-
-            // Обработка коллизий
-            handlePlayerCollisions(player);
-        }
-    }
-
-    private void handlePlayerCollisions(Player player) {
-        Rectangle playerBounds = player.getCollisionComponent().getBounds();
-        boolean onGround = false;
-
-        for (Rectangle platform : platforms) {
-            if (playerBounds.overlaps(platform)) {
-                float overlapLeft = playerBounds.x + playerBounds.width - platform.x;
-                float overlapRight = platform.x + platform.width - playerBounds.x;
-                float overlapTop = playerBounds.y + playerBounds.height - platform.y;
-                float overlapBottom = platform.y + platform.height - playerBounds.y;
-
-                float minOverlap = Math.min(
-                        Math.min(overlapLeft, overlapRight),
-                        Math.min(overlapTop, overlapBottom)
-                );
-
-                if (minOverlap == overlapTop) {
-                    player.getPosition().y = platform.y - playerBounds.height;
-                    player.getVelocity().y = 0;
-                } else if (minOverlap == overlapBottom) {
-                    player.getPosition().y = platform.y + platform.height;
-                    player.getVelocity().y = 0;
-                    onGround = true;
-                    player.setJumping(false);
-                } else if (minOverlap == overlapLeft) {
-                    player.getPosition().x = platform.x - playerBounds.width;
-                    player.getVelocity().x = 0;
-                } else if (minOverlap == overlapRight) {
-                    player.getPosition().x = platform.x + platform.width;
-                    player.getVelocity().x = 0;
-                }
-            }
-        }
-        player.setOnGround(onGround);
+        isPlayerInitialized = true;
     }
 
     public void addPlatform(Rectangle platform) {
@@ -85,10 +51,60 @@ public class PhysicsSystem {
     }
 
     public List<Rectangle> getPlatforms() {
-        return new ArrayList<>(platforms);
+        return platforms;
     }
 
     public void clearPlatforms() {
         platforms.clear();
+    }
+
+    public void update(float deltaTime) {
+        if (!isPlayerInitialized) {
+            initializePlayer();
+        }
+        if (inputHandler != null && player != null) {
+            inputHandler.update(deltaTime);
+        } else {
+            System.err.println("Игрок или InputHandler не инициализированы в PhysicsSystem");
+        }
+
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (!entity.isActive()) continue;
+            Vector2 position = entity.getPosition();
+            Vector2 velocity = entity.getVelocity();
+
+            // Применяем гравитацию
+            if (entity instanceof Player || entity instanceof Boss) {
+                velocity.y += gravity * deltaTime;
+            }
+
+            // Обновляем позицию
+            position.add(velocity.cpy().scl(deltaTime));
+
+            // Проверяем столкновения с платформами
+            boolean onGround = false;
+            for (Rectangle platform : platforms) {
+                CollisionComponent platformCollision = new CollisionComponent(platform.width, platform.height);
+                platformCollision.update(new Vector2(platform.x, platform.y));
+                if (entity.getCollisionComponent().collidesWith(platformCollision)) {
+                    if (velocity.y < 0) { // Падение
+                        position.y = platform.y + platform.height;
+                        velocity.y = 0;
+                        onGround = true;
+                    }
+                }
+            }
+
+            // Ограничение по высоте (не ниже 150 пикселей)
+            if (entity instanceof Player) {
+                if (position.y < MIN_Y_POSITION) {
+                    position.y = MIN_Y_POSITION;
+                    velocity.y = 0;
+                    onGround = true;
+                }
+                player.setOnGround(onGround);
+                player.setJumping(!onGround);
+            }
+        }
     }
 }

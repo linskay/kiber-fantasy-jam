@@ -13,9 +13,10 @@ import com.cyberkingdom.rendering.SpriteRenderer;
 import com.cyberkingdom.ui.UIManager;
 import com.cyberkingdom.world.LevelLoader;
 
-
 public class GameScreen implements com.badlogic.gdx.Screen {
     private static final float MIN_WORLD_Y = 150f;
+    private static final float LEVEL_WIDTH = 1200f; // Assuming level width based on platforms
+    private static final float LEVEL_HEIGHT = 800f; // Assuming level height
     private EntitySystem entitySystem;
     private PhysicsSystem physicsSystem;
     private LevelLoader levelLoader;
@@ -50,9 +51,12 @@ public class GameScreen implements com.badlogic.gdx.Screen {
         camera.update();
 
         try {
-            background = new Texture(Gdx.files.internal("assets/ui/background.png"));
+            // Load level-specific background (assuming assets/background_level1.png for level 1)
+            background = new Texture(Gdx.files.internal("assets/background_level1.png"));
         } catch (Exception e) {
-            Gdx.app.error("GameScreen", "Failed to load background", e);
+            Gdx.app.error("GameScreen", "Failed to load level background, falling back to default", e);
+            // Fallback to a blank texture if the level background fails to load
+            background = new Texture(Gdx.files.internal("assets/ui/background.png"));
         }
     }
 
@@ -67,15 +71,15 @@ public class GameScreen implements com.badlogic.gdx.Screen {
 
     @Override
     public void render(float deltaTime) {
-        Gdx.gl.glClearColor(0, 0, 1, 1);
+        // Set clear color to transparent to avoid blue background
+        Gdx.gl.glClearColor(0, 0, 0, 0);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if (player != null) {
-            camera.position.set(
-                    player.getPosition().x,
-                    Math.max(player.getPosition().y, MIN_WORLD_Y),
-                    0
-            );
+            // Camera follows the player but is clamped within level bounds
+            float cameraX = Math.max(Gdx.graphics.getWidth() / 2f, Math.min(player.getPosition().x, LEVEL_WIDTH - Gdx.graphics.getWidth() / 2f));
+            float cameraY = Math.max(Gdx.graphics.getHeight() / 2f, Math.min(player.getPosition().y, LEVEL_HEIGHT - Gdx.graphics.getHeight() / 2f));
+            camera.position.set(cameraX, cameraY, 0);
         }
         camera.update();
 
@@ -83,8 +87,9 @@ public class GameScreen implements com.badlogic.gdx.Screen {
         gameBatch.setProjectionMatrix(camera.combined);
         gameBatch.begin();
 
+        // Draw the fixed level background
         if (background != null) {
-            gameBatch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            gameBatch.draw(background, 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
         }
 
         for (Platform platform : levelLoader.getPlatforms()) {

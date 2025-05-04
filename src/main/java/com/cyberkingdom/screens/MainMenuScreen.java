@@ -18,7 +18,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.cyberkingdom.gameengine.GameEngine;
 
 public class MainMenuScreen implements Screen {
-    private final GameEngine gameEngine;
+    private final GameEngine engine;
     private Stage stage;
     private BitmapFont titleFont;
     private BitmapFont menuFont;
@@ -62,8 +62,8 @@ public class MainMenuScreen implements Screen {
         }
     }
 
-    public MainMenuScreen(GameEngine gameEngine) {
-        this.gameEngine = gameEngine;
+    public MainMenuScreen(GameEngine engine) {
+        this.engine = engine;
         this.stage = new Stage(new ScreenViewport());
         this.shapeRenderer = new ShapeRenderer();
         this.shapeRenderer.setAutoShapeType(true);
@@ -119,7 +119,7 @@ public class MainMenuScreen implements Screen {
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(
                 Gdx.files.internal("assets/fonts/arial.ttf")
         );
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;:,{}\"´`'<>";
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<>";
 
         FreeTypeFontGenerator.FreeTypeFontParameter menuParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
         menuParams.size = 32;
@@ -130,8 +130,10 @@ public class MainMenuScreen implements Screen {
         menuFont = generator.generateFont(menuParams);
 
         FreeTypeFontGenerator.FreeTypeFontParameter descParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        descParams.size = 12;
+        descParams.size = 20;
         descParams.color = DESC_COLOR;
+        descParams.borderWidth = 1;
+        descParams.borderColor = DESC_BORDER;
         descParams.characters = characters;
         descFont = generator.generateFont(descParams);
 
@@ -154,7 +156,7 @@ public class MainMenuScreen implements Screen {
         stage.addActor(titleLabel);
 
         float startY = Gdx.graphics.getHeight()/2f;
-        for (int i = 0; i < menuItems.length; i++) {
+        for(int i = 0; i < menuItems.length; i++) {
             Label itemLabel = new Label(menuItems[i].title, new Label.LabelStyle(menuFont, Color.WHITE));
             itemLabel.setPosition(Gdx.graphics.getWidth()/2f, startY - i*ITEM_PADDING, Align.center);
             menuItems[i].bounds.set(
@@ -175,10 +177,10 @@ public class MainMenuScreen implements Screen {
     }
 
     private void handleInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.W)) selectedIndex--;
-        if (Gdx.input.isKeyJustPressed(Input.Keys.S)) selectedIndex++;
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            if (selectSound != null) selectSound.play(0.7f);
+        if(Gdx.input.isKeyJustPressed(Input.Keys.W)) selectedIndex--;
+        if(Gdx.input.isKeyJustPressed(Input.Keys.S)) selectedIndex++;
+        if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            if(selectSound != null) selectSound.play(0.7f);
             handleSelection();
         }
     }
@@ -187,34 +189,31 @@ public class MainMenuScreen implements Screen {
         Vector2 mousePos = new Vector2(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
         boolean hoverFound = false;
 
-        for (int i = 0; i < menuItems.length; i++) {
-            if (menuItems[i].bounds.contains(mousePos)) {
+        for(int i = 0; i < menuItems.length; i++) {
+            if(menuItems[i].bounds.contains(mousePos)) {
                 selectedIndex = i;
                 hoverFound = true;
-                if (Gdx.input.justTouched()) handleSelection();
+                if(Gdx.input.justTouched()) handleSelection();
             }
         }
 
-        if (!hoverFound) selectedIndex = MathUtils.clamp(selectedIndex, 0, menuItems.length - 1);
+        if(!hoverFound) selectedIndex = MathUtils.clamp(selectedIndex, 0, menuItems.length - 1);
     }
 
     private void updateDescription(float delta) {
         float targetAlpha = menuItems[selectedIndex].description.isEmpty() ? 0 : 1;
         descAlpha = MathUtils.lerp(descAlpha, targetAlpha, delta * 10);
 
-        if (descAlpha > 0.1f) {
-            // Новая логика позиционирования относительно курсора
+        if(descAlpha > 0.1f) {
             float cursorX = Gdx.input.getX();
             GlyphLayout layout = new GlyphLayout(descFont, menuItems[selectedIndex].description);
 
-            // Рассчитываем целевую позицию с учетом границ экрана
             targetScrollX = MathUtils.clamp(
                     cursorX - layout.width / 2,
                     20,
                     Gdx.graphics.getWidth() - layout.width - 20
             );
 
-            // Плавное перемещение
             currentScrollX = MathUtils.lerp(currentScrollX, targetScrollX, delta * 8);
         } else {
             currentScrollX = Gdx.graphics.getWidth();
@@ -231,7 +230,7 @@ public class MainMenuScreen implements Screen {
                 bounds.height - 4
         );
 
-        for (int i = 1; i <= GLOW_LAYERS; i++) {
+        for(int i = 1; i <= GLOW_LAYERS; i++) {
             float alpha = NEON_GLOW.a * (1 - (float)i/GLOW_LAYERS);
             float spread = GLOW_SPREAD * i;
             float pulse = 0.5f + MathUtils.sin(glowTimer * 2) * 0.5f;
@@ -243,18 +242,17 @@ public class MainMenuScreen implements Screen {
     }
 
     private void drawScrollingText() {
-        if (descAlpha > 0.01f) {
+        if(descAlpha > 0.01f) {
             String text = menuItems[selectedIndex].description;
             GlyphLayout layout = new GlyphLayout(descFont, text);
             float yPos = menuItems[selectedIndex].bounds.y + DESC_Y_OFFSET;
 
-            // Рисуем текст с эффектами
             Batch batch = stage.getBatch();
             batch.begin();
 
             // Неоновое свечение
             descFont.setColor(0.1f, 0.9f, 1f, descAlpha * 0.4f);
-            for (int i = -2; i <= 2; i++) {
+            for(int i = -2; i <= 2; i++) {
                 descFont.draw(batch, text, currentScrollX + i, yPos + i);
             }
 
@@ -279,9 +277,16 @@ public class MainMenuScreen implements Screen {
     }
 
     private void handleSelection() {
-        switch (selectedIndex) {
-            case 0: gameEngine.startGame(); break;
-            case 4: Gdx.app.exit(); break;
+        switch(selectedIndex) {
+            case 0:
+                engine.startGame();
+                break;
+            case 2:
+                engine.showStoryScreen();
+                break;
+            case 4:
+                Gdx.app.exit();
+                break;
         }
     }
 
@@ -312,15 +317,48 @@ public class MainMenuScreen implements Screen {
         titleFont.dispose();
         menuFont.dispose();
         descFont.dispose();
-        if (cursorTexture != null) cursorTexture.dispose();
-        if (backgroundTexture != null) backgroundTexture.dispose();
+        if(cursorTexture != null) cursorTexture.dispose();
+        if(backgroundTexture != null) backgroundTexture.dispose();
         shapeRenderer.dispose();
-        if (menuMusic != null) menuMusic.dispose();
-        if (selectSound != null) selectSound.dispose();
+        if(menuMusic != null) menuMusic.dispose();
+        if(selectSound != null) selectSound.dispose();
+    }
+
+    public boolean isMusicPlaying() {
+        return menuMusic != null && menuMusic.isPlaying();
+    }
+
+    public void pauseMusic() {
+        if (menuMusic != null) menuMusic.pause();
+    }
+
+    public BitmapFont getMenuFont() {
+        return menuFont;
+    }
+
+    public Sound getSelectSound() {
+        return selectSound;
+    }
+
+    @Override
+    public void hide() {
+        // Не останавливаем музыку при переходе
+    }
+
+    public void resumeMusic() {
+        if (menuMusic != null && !menuMusic.isPlaying()) {
+            menuMusic.play();
+        }
     }
 
     @Override public void pause() {}
     @Override public void resume() {}
-    @Override public void hide() { if (menuMusic != null) menuMusic.stop(); }
     @Override public void show() {}
+    public Texture getBackgroundTexture() {
+        return backgroundTexture;
+    }
+
+    public Texture getCursorTexture() {
+        return cursorTexture;
+    }
 }

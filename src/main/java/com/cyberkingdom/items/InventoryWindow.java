@@ -210,15 +210,12 @@ public class InventoryWindow extends Window {
         List<Item> items = new ArrayList<>(inventory.getItems());
         if (index < items.size()) {
             Item selectedItem = items.get(index);
-            System.out.println("Использован предмет: " + selectedItem.getItemType() + " x" + selectedItem.getQuantity());
-
             String itemType = selectedItem.getItemType().toLowerCase();
 
             switch (itemType) {
                 case "crypto_coin":
                     float healAmount = player.getMaxHealth() * 0.5f;
                     player.setHealth(Math.min(player.getHealth() + healAmount, player.getMaxHealth()));
-                    System.out.println("Восстановлено " + healAmount + " HP");
                     break;
 
                 case "vpn_token":
@@ -235,9 +232,6 @@ public class InventoryWindow extends Window {
                                 entitySystem.addEntity(cryptoCoin);
                             }
                         }
-                        System.out.println("Добавлено " + n + " CRYPTO_COIN");
-                    } else {
-                        System.out.println("Платформы отсутствуют, монеты не созданы.");
                     }
                     break;
 

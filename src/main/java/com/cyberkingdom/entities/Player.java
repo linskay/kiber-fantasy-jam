@@ -1,25 +1,32 @@
 package com.cyberkingdom.entities;
 
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.items.Inventory;
 import com.cyberkingdom.physics.CollisionComponent;
+import com.cyberkingdom.screens.GameScreen;
+import com.badlogic.gdx.Gdx;
 
 public class Player extends GameEntity implements Collidable {
     private CollisionComponent collision;
     private Inventory inventory;
     private boolean isJumping;
     private boolean onGround;
-    private float jumpVelocity = 800f;
+    private int jumpsLeft = 2; // Максимальное количество прыжков
+    private float jumpVelocity = 400f;
     private float moveSpeed = 200f;
     private float health = 100f;
     private float maxHealth = 100f;
     private int coins = 0;
-    private float gravity = -1200f;
+    private float gravity = -500f;
+    private GameScreen gameScreen;
 
-    public Player(float x, float y) {
+    public Player(Vector2 position, GameScreen gameScreen) {
         super("Player");
-        this.position.set(x, y);
-        this.collision = new CollisionComponent(32, 48);
+        this.position = position;
+        this.velocity = new Vector2();
+        this.gameScreen = gameScreen;
+        this.collision = new CollisionComponent(64, 64);
         this.inventory = new Inventory();
         collision.update(position);
     }
@@ -39,7 +46,15 @@ public class Player extends GameEntity implements Collidable {
     public boolean isJumping() { return isJumping; }
     public void setJumping(boolean jumping) { isJumping = jumping; }
     public boolean isOnGround() { return onGround; }
-    public void setOnGround(boolean onGround) { this.onGround = onGround; }
+    public void setOnGround(boolean onGround) { 
+        this.onGround = onGround;
+        if (onGround) {
+            jumpsLeft = 2; // Восстанавливаем прыжки при приземлении
+        }
+    }
+    public boolean canJump() { return jumpsLeft > 0; }
+    public void useJump() { jumpsLeft--; }
+    public int getJumpsLeft() { return jumpsLeft; }
     public float getJumpVelocity() { return jumpVelocity; }
     public float getMoveSpeed() { return moveSpeed; }
     public float getHealth() { return health; }
@@ -55,5 +70,26 @@ public class Player extends GameEntity implements Collidable {
     public void move(float deltaX, float deltaY) {
         position.add(deltaX, deltaY);
         collision.update(position);
+    }
+
+    public void collectCoin() {
+        coins++;
+        if (gameScreen != null) {
+            gameScreen.updateCoinCount(coins);
+        }
+        Gdx.app.debug("Player", "Collected coin, total: " + coins);
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        if (inventory != null) {
+            inventory.dispose();
+            inventory = null;
+        }
+        if (collision != null) {
+            collision = null;
+        }
+        gameScreen = null;
     }
 }

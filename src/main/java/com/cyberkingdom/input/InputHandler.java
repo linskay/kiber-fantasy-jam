@@ -6,7 +6,6 @@ import com.cyberkingdom.entities.Player;
 
 public class InputHandler {
     private final Player player;
-    private final float speed = 200f;
     private boolean jumpPressed = false;
     private boolean inventoryPressed = false;
     private boolean inventoryVisible = false;
@@ -21,26 +20,32 @@ public class InputHandler {
         handleInventory();
     }
 
-    private void handleJump() {
-        if ((Gdx.input.isKeyPressed(Input.Keys.SPACE) ||
-                (Gdx.input.isKeyPressed(Input.Keys.W)) && !jumpPressed)) {
-
-            if (player.isOnGround()) {
-                player.getVelocity().y = player.getJumpVelocity();
+    public void handleJump() {
+        // Проверяем нажатие клавиши прыжка (SPACE или W)
+        if ((Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.W)) && !jumpPressed) {
+            if (player.canJump()) {
+                player.setVelocity(player.getVelocity().x, player.getJumpVelocity());
                 player.setJumping(true);
-                jumpPressed = true;
+                player.setOnGround(false);
+                player.useJump();
+                Gdx.app.debug("Input", "Jump initiated, jumps left: " + player.getJumpsLeft());
             }
-        } else if (!Gdx.input.isKeyPressed(Input.Keys.SPACE) &&
-                !Gdx.input.isKeyPressed(Input.Keys.W)) {
+            jumpPressed = true;
+        } else if (!Gdx.input.isKeyPressed(Input.Keys.SPACE) && !Gdx.input.isKeyPressed(Input.Keys.W)) {
             jumpPressed = false;
         }
     }
 
-    private void handleMovement() {
-        float moveX = 0;
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) moveX -= speed;
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) moveX += speed;
-        player.getVelocity().x = moveX;
+    public void handleMovement() {
+        float targetVelocity = 0;
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            targetVelocity = -player.getMoveSpeed();
+        } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            targetVelocity = player.getMoveSpeed();
+        }
+
+        // Простое движение без ускорения/замедления
+        player.setVelocity(targetVelocity, player.getVelocity().y);
     }
 
     private void handleInventory() {
@@ -54,5 +59,9 @@ public class InputHandler {
 
     public boolean isInventoryVisible() {
         return inventoryVisible;
+    }
+
+    public void dispose() {
+        player = null;
     }
 }

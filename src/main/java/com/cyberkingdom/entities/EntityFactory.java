@@ -1,21 +1,33 @@
 package com.cyberkingdom.entities;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.graphics.Texture;
 import com.cyberkingdom.items.Item;
+import com.cyberkingdom.screens.GameScreen;
+import com.cyberkingdom.rendering.SpriteManager;
 
 import java.util.Random;
 
 public class EntityFactory {
     private static int itemCount = 0;
     private static final Random random = new Random();
+    private SpriteManager spriteManager;
 
     // Используйте enum или константы, чтобы избежать ошибок в строках
     private static final String[] ITEMS = {
             "CRYPTO_COIN", "VPN_TOKEN", "USB_SCATERT", "HARDWARE_WALLET"
     };
 
+    public EntityFactory(SpriteManager spriteManager) {
+        this.spriteManager = spriteManager;
+    }
+
     public GameEntity createPlayer(float x, float y) {
-        Player player = new Player(x, y);
+        return createPlayer(new Vector2(x, y), null);
+    }
+
+    public GameEntity createPlayer(Vector2 position, GameScreen gameScreen) {
+        Player player = new Player(position, gameScreen);
         if (player.getAnimation() != null) {
             player.getAnimation().setFrameDuration(0.08f);
         }
@@ -28,7 +40,7 @@ public class EntityFactory {
             type = Enemy.EnemyType.valueOf(name.toUpperCase());
         } catch (IllegalArgumentException e) {
             System.err.println("Unknown enemy type: " + name + ". Using fallback type TROLL_BOT.");
-            type = Enemy.EnemyType.TROLL_BOT; // Используем первый или подходящий тип по умолчанию
+            type = Enemy.EnemyType.TROLL_BOT;
         }
         Enemy enemy = new Enemy(type, x, y);
         if (enemy.getAnimation() != null) {
@@ -57,25 +69,25 @@ public class EntityFactory {
         return boss;
     }
 
-    // Новый метод создания предмета с указанием количества
     public Item createItem(String itemType, Vector2 position, int quantity) {
         for (Item.ItemData data : Item.ALL_ITEMS) {
             if (data.id.equalsIgnoreCase(itemType)) {
-                return new Item(position, data, quantity);
+                String key = data.id.equalsIgnoreCase("COIN") ? "COIN" : data.id;
+                Texture texture = spriteManager.getFrames(key)[0].getTexture();
+                Item item = new Item(position, data.id, quantity, texture);
+                item.name = data.name;
+                item.description = data.description;
+                item.effect = data.effect;
+                return item;
             }
         }
         System.err.println("Неизвестный тип предмета: " + itemType);
         return null;
     }
 
-    // Обновлённый существующий метод для совместимости
-    public GameEntity createItem(Vector2 position, String name) {
-        return createItem(name.toLowerCase(), position, 1);
-    }
-
     public GameEntity createRandomItem(float x, float y) {
         String randomItemName = ITEMS[random.nextInt(ITEMS.length)];
-        return createItem(new Vector2(x, y), randomItemName);
+        return createItem(randomItemName, new Vector2(x, y), 1);
     }
 
     public static void resetItemCounter() {

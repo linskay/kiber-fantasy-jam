@@ -15,32 +15,39 @@ public class SpriteManager {
         loadTextures();
     }
 
-    private void loadTextures() {
-        // Загрузка текстур предметов по базовым именам
-        loadItemTexture("HARDWARE_WALLET");
-        loadItemTexture("VPN_TOKEN");
-        loadItemTexture("CRYPTO_COIN");
-        loadItemTexture("USB_SCATTER");
-
-        // Загрузка остальных текстур
-        loadTexture("Player", "entities/player.png");
-        loadTexture("WITCH_VPN", "entities/witch_vpn.png");
-        loadTexture("CAT_MINER", "entities/cat_miner.png");
+    public void loadTextures() {
+        try {
+            loadTexture("assets/entities/player.png", "Player");
+            loadTexture("assets/entities/witch_vpn.png", "WITCH_VPN");
+            loadTexture("assets/entities/cat_miner.png", "CAT_MINER");
+            loadTexture("assets/platform.png", "Platform");
+            loadTexture("assets/Coin.png", "COIN");
+            loadItemTexture("HARDWARE_WALLET");
+            loadItemTexture("VPN_TOKEN");
+            loadItemTexture("CRYPTO_COIN");
+            loadItemTexture("USB_SCATTER");
+        } catch (Exception e) {
+            Gdx.app.error("SpriteManager", "Error loading textures: " + e.getMessage(), e);
+        }
     }
 
     private void loadItemTexture(String itemName) {
-        String path = "items/" + itemName.toLowerCase() + ".png";
+        String path = "assets/items/" + itemName.toLowerCase() + ".png";
         try {
-            textures.put(itemName, new Texture(Gdx.files.internal("assets/" + path)));
+            Texture texture = new Texture(Gdx.files.internal(path));
+            textures.put(itemName, texture);
+            Gdx.app.debug("SpriteManager", "Loaded texture: " + path);
         } catch (Exception e) {
-            Gdx.app.error("SpriteManager", "Error loading item texture: " + itemName, e);
+            Gdx.app.error("SpriteManager", "Error loading item texture: " + itemName + " from path: " + path, e);
             textures.put(itemName, createPlaceholderTexture());
         }
     }
 
-    private void loadTexture(String name, String path) {
+    private void loadTexture(String path, String name) {
         try {
-            textures.put(name, new Texture(Gdx.files.internal("assets/" + path)));
+            Texture texture = new Texture(Gdx.files.internal(path));
+            textures.put(name, texture);
+            Gdx.app.debug("SpriteManager", "Loaded texture: " + path);
         } catch (Exception e) {
             Gdx.app.error("SpriteManager", "Error loading texture: " + path, e);
             textures.put(name, createPlaceholderTexture());
@@ -63,6 +70,11 @@ public class SpriteManager {
     }
 
     public void dispose() {
-        textures.values().forEach(Texture::dispose);
+        for (Texture texture : textures.values()) {
+            if (texture != null) {
+                texture.dispose();
+            }
+        }
+        textures.clear();
     }
 }

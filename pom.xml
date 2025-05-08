@@ -90,10 +90,7 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-            </resource>
-            <resource>
-                <directory>src/main/assets</directory>
-                <targetPath>assets</targetPath>
+                <filtering>false</filtering>
             </resource>
         </resources>
         <plugins>
@@ -119,7 +116,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>DesktopLauncher</mainClass>
+                                    <mainClass>com.cyberkingdom.platform.DesktopLauncher</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
+import com.cyberkingdom.boss.BossFightLogic;
 import com.cyberkingdom.entities.*;
 import com.cyberkingdom.input.InputHandler;
 import com.cyberkingdom.physics.PhysicsSystem;
@@ -41,37 +43,42 @@ public class GameEngine extends Game {
 
     @Override
     public void create() {
-        initializeCoreSystems();
-        initializeScreens();
-        showMainMenu();
+        try {
+            initializeCoreSystems();
+            initializeScreens();
+            showMainMenu();
+        } catch (Exception e) {
+            Gdx.app.error("GameEngine", "Failed to initialize game", e);
+            throw new RuntimeException("Game initialization failed", e);
+        }
     }
 
     private void initializeCoreSystems() {
-        batch = new SpriteBatch();
-        spriteManager = new SpriteManager();
-        GameEntity.setSpriteManager(spriteManager);
-        spriteRenderer = new SpriteRenderer(batch);
-        entitySystem = new EntitySystem();
-        entityFactory = new EntityFactory();
-        physicsSystem = new PhysicsSystem(entitySystem);
-
-        // Инициализация шрифта с поддержкой кириллицы
         try {
-            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
-            FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
-            params.size = 32;
-            params.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<> ";
-            menuFont = generator.generateFont(params);
-            generator.dispose();
-            Gdx.app.log("GameEngine", "Menu font with Cyrillic support initialized successfully");
-        } catch (Exception e) {
-            Gdx.app.error("GameEngine", "Failed to initialize menu font with Cyrillic support, falling back to default", e);
-            menuFont = new BitmapFont(); // Запасной вариант без кириллицы
-        }
+            batch = new SpriteBatch();
+            spriteManager = new SpriteManager();
+            GameEntity.setSpriteManager(spriteManager);
+            spriteRenderer = new SpriteRenderer();
+            entitySystem = new EntitySystem();
+            entityFactory = new EntityFactory(spriteManager);
+            physicsSystem = new PhysicsSystem(entitySystem);
 
-        selectSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/select.mp3"));
-        mainMenuBackground = new Texture(Gdx.files.internal("assets/ui/background.png"));
-        cursorTexture = new Texture(Gdx.files.internal("assets/kursor.png"));
+            // Инициализация шрифта с поддержкой кириллицы
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
+            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            parameter.size = 32;
+            parameter.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<> ";
+            menuFont = generator.generateFont(parameter);
+            generator.dispose();
+
+            // Загрузка звуков и текстур
+            selectSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/select.mp3"));
+            mainMenuBackground = new Texture(Gdx.files.internal("assets/ui/background.png"));
+            cursorTexture = new Texture(Gdx.files.internal("assets/kursor.png"));
+        } catch (Exception e) {
+            Gdx.app.error("GameEngine", "Failed to initialize core systems", e);
+            throw new RuntimeException("Core systems initialization failed", e);
+        }
     }
 
     private void initializeScreens() {
@@ -89,6 +96,16 @@ public class GameEngine extends Game {
             entitySystem.clear();
             physicsSystem.clearPlatforms();
 
+            // Создаем игрока
+            Player player = (Player) entityFactory.createPlayer(new Vector2(100, 300), null);
+            entitySystem.addEntity(player);
+            physicsSystem.setPlayer(player);
+
+            // Инициализируем UI
+            inputHandler = new InputHandler(player);
+            uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
+
+            // Создаем LevelLoader
             levelLoader = new LevelLoader(
                     spriteManager,
                     entitySystem,
@@ -97,15 +114,10 @@ public class GameEngine extends Game {
                     currentLevelIndex + 1
             );
 
-            Player player = (Player) entityFactory.createPlayer(100, 200);
-            entitySystem.addEntity(player);
-            physicsSystem.setPlayer(player);
+            // Создаем BossFightLogic
+            bossFightLogic = new BossFightLogic(levelLoader, player, this);
 
-            inputHandler = new InputHandler(player);
-            uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
-
-            bossFightLogic = new BossFightLogic(null, player, this, levelLoader);
-
+            // Создаем GameScreen
             gameScreen = new GameScreen(
                     entitySystem,
                     physicsSystem,
@@ -114,8 +126,6 @@ public class GameEngine extends Game {
                     uiManager,
                     bossFightLogic
             );
-
-            Gdx.app.log("GameEngine", "Level " + (currentLevelIndex + 1) + " loaded");
         } catch (Exception e) {
             Gdx.app.error("GameEngine", "Level loading failed", e);
             createFallbackEnvironment();
@@ -123,20 +133,41 @@ public class GameEngine extends Game {
     }
 
     private void createFallbackEnvironment() {
-        physicsSystem.addPlatform(new Rectangle(0, 150, 1200, 50));
-        Player player = (Player) entityFactory.createPlayer(100, 200);
-        entitySystem.addEntity(player);
-        physicsSystem.setPlayer(player);
-        inputHandler = new InputHandler(player);
-        uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
-        gameScreen = new GameScreen(
-                entitySystem,
-                physicsSystem,
-                null,
-                spriteRenderer,
-                uiManager,
-                null
-        );
+        try {
+            // Создаем игрока
+            Player player = (Player) entityFactory.createPlayer(new Vector2(100, 300), null);
+            entitySystem.addEntity(player);
+            physicsSystem.setPlayer(player);
+
+            // Инициализируем UI
+            inputHandler = new InputHandler(player);
+            uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
+
+            // Создаем LevelLoader
+            levelLoader = new LevelLoader(
+                    spriteManager,
+                    entitySystem,
+                    physicsSystem,
+                    entityFactory,
+                    1
+            );
+
+            // Создаем BossFightLogic
+            bossFightLogic = new BossFightLogic(levelLoader, player, this);
+
+            // Создаем GameScreen
+            gameScreen = new GameScreen(
+                    entitySystem,
+                    physicsSystem,
+                    levelLoader,
+                    spriteRenderer,
+                    uiManager,
+                    bossFightLogic
+            );
+        } catch (Exception e) {
+            Gdx.app.error("GameEngine", "Fallback environment creation failed", e);
+            throw new RuntimeException("Failed to create fallback environment", e);
+        }
     }
 
     public void nextLevel() {

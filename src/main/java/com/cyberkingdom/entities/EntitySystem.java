@@ -19,7 +19,10 @@ public class EntitySystem {
      * @param entity сущность для удаления
      */
     public void removeEntity(GameEntity entity) {
-        entities.remove(entity);
+        if (entity != null) {
+            entity.dispose();
+            entities.remove(entity);
+        }
     }
 
     /**
@@ -34,6 +37,16 @@ public class EntitySystem {
      * Очищает список сущностей.
      */
     public void clear() {
+        for (GameEntity entity : entities) {
+            if (entity != null) {
+                entity.dispose();
+            }
+        }
         entities.clear();
+    }
+
+    public void dispose() {
+        clear();
+        entities = null;
     }
 }

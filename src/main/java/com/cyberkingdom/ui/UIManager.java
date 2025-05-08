@@ -104,6 +104,10 @@ public class UIManager {
         stage.draw();
     }
 
+    public void updateCoinCount(int coins) {
+        Gdx.app.log("UIManager", "Updating coin count to: " + coins);
+    }
+
     public void dispose() {
         uiBatch.dispose();
         shapeRenderer.dispose();

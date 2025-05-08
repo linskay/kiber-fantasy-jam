@@ -35,7 +35,20 @@ public class AnimationComponent {
         return frames.get(currentFrameIndex);
     }
 
+    public List<TextureRegion> getFrames() {
+        return frames;
+    }
+
     public void setFrameDuration(float duration) {
         this.frameDuration = Math.max(0.01f, duration); // Минимальное значение для избежания деления на ноль
+    }
+
+    public void dispose() {
+        if (frames != null) {
+            frames.clear();
+            frames = null;
+        }
+        stateTime = 0f;
+        currentFrameIndex = 0;
     }
 }

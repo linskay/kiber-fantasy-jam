@@ -1,137 +1,125 @@
 package com.cyberkingdom.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.cyberkingdom.entities.*;
-import com.cyberkingdom.items.Item;
 import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.rendering.SpriteRenderer;
 import com.cyberkingdom.ui.UIManager;
 import com.cyberkingdom.world.LevelLoader;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.cyberkingdom.boss.BossFightLogic;
 
-public class GameScreen implements com.badlogic.gdx.Screen {
-    private static final float MIN_WORLD_Y = 150f;
-    private static final float LEVEL_WIDTH = 1200f; // Assuming level width based on platforms
-    private static final float LEVEL_HEIGHT = 800f; // Assuming level height
-    private EntitySystem entitySystem;
-    private PhysicsSystem physicsSystem;
-    private LevelLoader levelLoader;
-    private SpriteRenderer spriteRenderer;
-    private UIManager uiManager;
-    private OrthographicCamera camera;
-    private Player player;
-    private BossFightLogic bossFightLogic;
+public class GameScreen implements Screen {
+    private final EntitySystem entitySystem;
+    private final PhysicsSystem physicsSystem;
+    private final LevelLoader levelLoader;
+    private final SpriteRenderer spriteRenderer;
+    private final UIManager uiManager;
+    private final BossFightLogic bossFightLogic;
+    private final OrthographicCamera camera;
+    private final ExtendViewport viewport;
+    private BitmapFont font;
+    private static final float LEVEL_WIDTH = 1200f;
+    private static final float LEVEL_HEIGHT = 800f;
     private Texture background;
+    private ShapeRenderer shapeRenderer;
+    private SpriteBatch gameBatch;
 
-    public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem, LevelLoader levelLoader,
-                      SpriteRenderer spriteRenderer, UIManager uiManager, BossFightLogic bossFightLogic) {
+    public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem, LevelLoader levelLoader, 
+                     SpriteRenderer spriteRenderer, UIManager uiManager, BossFightLogic bossFightLogic) {
         this.entitySystem = entitySystem;
         this.physicsSystem = physicsSystem;
         this.levelLoader = levelLoader;
         this.spriteRenderer = spriteRenderer;
         this.uiManager = uiManager;
         this.bossFightLogic = bossFightLogic;
-        this.camera = new OrthographicCamera();
-        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        findPlayer();
-
-        if (player != null) {
-            camera.position.set(
-                    player.getPosition().x,
-                    Math.max(player.getPosition().y, MIN_WORLD_Y),
-                    0
-            );
-        } else {
-            camera.position.set(100, MIN_WORLD_Y, 0);
-        }
-        camera.update();
-
-        try {
-            // Load level-specific background (assuming assets/background_level1.png for level 1)
-            background = new Texture(Gdx.files.internal("assets/background_level1.png"));
-        } catch (Exception e) {
-            Gdx.app.error("GameScreen", "Failed to load level background, falling back to default", e);
-            // Fallback to a blank texture if the level background fails to load
-            background = new Texture(Gdx.files.internal("assets/ui/background.png"));
-        }
-    }
-
-    private void findPlayer() {
-        for (GameEntity entity : entitySystem.getEntities()) {
-            if (entity instanceof Player) {
-                this.player = (Player) entity;
-                break;
-            }
-        }
+        this.gameBatch = new SpriteBatch();
+        this.shapeRenderer = new ShapeRenderer();
+        
+        // Инициализация камеры и вьюпорта
+        camera = new OrthographicCamera();
+        viewport = new ExtendViewport(LEVEL_WIDTH, LEVEL_HEIGHT, camera);
+        viewport.apply();
+        
+        // Инициализация шрифта
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 24;
+        parameter.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<> ";
+        font = generator.generateFont(parameter);
+        generator.dispose();
+        
+        // Загрузка фона
+        background = new Texture(Gdx.files.internal("assets/background_level1.png"));
+        
+        Gdx.app.log("GameScreen", "Initialized successfully");
     }
 
     @Override
-    public void render(float deltaTime) {
-        // Set clear color to transparent to avoid blue background
-        Gdx.gl.glClearColor(0, 0, 0, 0);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-        if (player != null) {
-            // Camera follows the player but is clamped within level bounds
-            float cameraX = Math.max(Gdx.graphics.getWidth() / 2f, Math.min(player.getPosition().x, LEVEL_WIDTH - Gdx.graphics.getWidth() / 2f));
-            float cameraY = Math.max(Gdx.graphics.getHeight() / 2f, Math.min(player.getPosition().y, LEVEL_HEIGHT - Gdx.graphics.getHeight() / 2f));
-            camera.position.set(cameraX, cameraY, 0);
-        }
-        camera.update();
-
-        SpriteBatch gameBatch = spriteRenderer.getBatch();
-        gameBatch.setProjectionMatrix(camera.combined);
-        gameBatch.begin();
-
-        // Draw the fixed level background
-        if (background != null) {
-            gameBatch.draw(background, 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
-        }
-
-        for (Platform platform : levelLoader.getPlatforms()) {
-            if (platform.getTexture() != null) {
-                Rectangle rect = platform.getRectangle();
-                gameBatch.draw(platform.getTexture(), rect.x, rect.y, rect.width, rect.height);
-            }
-        }
-
-        for (GameEntity entity : entitySystem.getEntities()) {
-            if (entity.isActive()) {
-                if (entity instanceof Item) {
-                    ((Item) entity).render(gameBatch);
-                } else if (!(entity instanceof Platform)) {
-                    spriteRenderer.render(entity);
-                }
-            }
-        }
-
-        gameBatch.end();
-
-        if (player != null) {
-            uiManager.render(player);
-        }
-
-        physicsSystem.update(deltaTime);
+    public void render(float delta) {
+        // Обновление
+        physicsSystem.update(delta);
         if (bossFightLogic != null) {
-            bossFightLogic.update(deltaTime);
+            bossFightLogic.update(delta);
         }
+        
+        // Очистка экрана
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        
+        // Обновление камеры
+        camera.update();
+        spriteRenderer.getBatch().setProjectionMatrix(camera.combined);
+        
+        // Рендеринг
+        spriteRenderer.getBatch().begin();
+        
+        // Рендеринг фона
+        if (background != null) {
+            spriteRenderer.getBatch().draw(background, 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
+        }
+        
+        // Рендеринг игровых объектов
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (entity.isActive() && !(entity instanceof Player)) {
+                spriteRenderer.render(entity);
+            }
+        }
+        
+        // Рендеринг игрока поверх остальных объектов
+        Player player = physicsSystem.getPlayer();
+        if (player != null && player.isActive()) {
+            spriteRenderer.render(player);
+        }
+        
+        // Рендеринг UI
+        if (uiManager != null) {
+            uiManager.render(physicsSystem.getPlayer());
+        }
+        
+        // Рендеринг счетчика монет
+        if (player != null) {
+            font.setColor(Color.YELLOW);
+            font.draw(spriteRenderer.getBatch(), 
+                     "Монеты: " + player.getCoins(), 
+                     20, 50);
+        }
+        
+        spriteRenderer.getBatch().end();
     }
 
     @Override
     public void resize(int width, int height) {
-        camera.setToOrtho(false, width, height);
-        camera.update();
-    }
-
-    @Override
-    public void dispose() {
-        if (background != null) {
-            background.dispose();
-        }
+        viewport.update(width, height, true);
     }
 
     @Override
@@ -148,5 +136,28 @@ public class GameScreen implements com.badlogic.gdx.Screen {
 
     @Override
     public void resume() {
+    }
+
+    @Override
+    public void dispose() {
+        if (background != null) {
+            background.dispose();
+        }
+        if (shapeRenderer != null) {
+            shapeRenderer.dispose();
+        }
+        if (font != null) {
+            font.dispose();
+        }
+        if (gameBatch != null) {
+            gameBatch.dispose();
+        }
+    }
+
+    public void updateCoinCount(int coins) {
+        // Обновляем счетчик монет в UI
+        if (uiManager != null) {
+            uiManager.updateCoinCount(coins);
+        }
     }
 }

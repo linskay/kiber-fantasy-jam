@@ -40,7 +40,7 @@ public class Inventory {
         }
         if (items.size() < capacity) {
             // Создаем копию предмета, чтобы отделить инвентарь от игрового объекта
-            Item copy = new Item(newItem.getPosition(), newItem.getItemType(), newItem.getDescription(), newItem.getQuantity());
+            Item copy = new Item(newItem.getPosition(), newItem.getItemType(), newItem.getDescription(), newItem.getQuantity(), newItem.getTexture());
             items.add(copy);
             return true;
         }
@@ -63,6 +63,18 @@ public class Inventory {
         if (index < 0 || index >= items.size()) return false;
         items.remove(index);
         return true;
+    }
+
+    public void dispose() {
+        if (items != null) {
+            for (Item item : items) {
+                if (item != null) {
+                    item.dispose();
+                }
+            }
+            items.clear();
+            items = null;
+        }
     }
 }
 

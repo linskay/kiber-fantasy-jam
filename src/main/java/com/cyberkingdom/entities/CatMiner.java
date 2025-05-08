@@ -28,14 +28,11 @@ public class CatMiner extends Boss {
 
     private void attemptAttack() {
         attackAttempts++;
-        System.out.println("Кот-майнер кричит: Мои монеты упали на 200%!");
         if (getCollisionComponent().collidesWith(target.getCollisionComponent())) {
             target.takeDamage(5f);
-            System.out.println("Кот-майнер атакует игрока! Здоровье игрока: " + target.getHealth());
         }
 
         if (attackAttempts >= 3) {
-            System.out.println("Кот-майнер исчезает, так и не попав!");
             setActive(false);
         }
     }

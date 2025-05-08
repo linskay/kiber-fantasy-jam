@@ -2,8 +2,8 @@ package com.cyberkingdom.items;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -14,15 +14,26 @@ import com.cyberkingdom.physics.CollisionComponent;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 
 public class Item extends GameEntity implements Collidable {
     private String itemType;
-    private String name;
-    private String description;
-    private String effect;
+    public String name;
+    public String description;
+    public String effect;
     private int quantity;
     private Texture texture;
     private CollisionComponent collision;
+    private boolean isActive;
+    private int value;
+    private static final Random random = new Random();
+
+    public static final String ITEM_COIN = "COIN";
+    public static final String ITEM_CRYPTO_COIN = "CRYPTO_COIN";
+    public static final String ITEM_VPN_TOKEN = "VPN_TOKEN";
+    public static final String ITEM_USB_SCATTER = "USB_SCATTER";
+    public static final String ITEM_HARDWARE_WALLET = "HARDWARE_WALLET";
 
     public static class ItemData {
         public final String id;
@@ -39,61 +50,30 @@ public class Item extends GameEntity implements Collidable {
     }
 
     public static final List<ItemData> ALL_ITEMS = Arrays.asList(
-            new ItemData("USB_SCATERT", "USB-Скатерть", "Восстанавливает 50% HP", "Самобранка 2.0"),
-            new ItemData("CRYPTO_COIN", "Крипто-Лопата", "Ломает стены (скрытые блоки)", "Digging to the Moon"),
-            new ItemData("VPN_TOKEN", "VPN-Токен", "Создает доп монетки", "Доступ к VPN"),
-            new ItemData("HARDWARE_WALLET", "Аппаратный кошелек", "Удаляет CAT_MINER", "Безопасное хранение"),
-            new ItemData("COIN", "Монета", "Собирай для очков", "Золотая монета")
+        new ItemData(ITEM_COIN, "Монета", "Обычная монета", "Увеличивает счетчик монет"),
+        new ItemData(ITEM_CRYPTO_COIN, "Криптомонета", "Цифровая валюта", "Увеличивает счетчик криптомонет"),
+        new ItemData(ITEM_VPN_TOKEN, "VPN Токен", "Токен для VPN", "Дает временную защиту"),
+        new ItemData(ITEM_USB_SCATTER, "USB Scatter", "USB устройство", "Увеличивает скорость"),
+        new ItemData(ITEM_HARDWARE_WALLET, "Аппаратный кошелек", "Защищенный кошелек", "Увеличивает защиту")
     );
 
-    public Item(Vector2 position, ItemData data, int quantity) {
-        super("Item_" + data.id);
-        this.itemType = data.id;
-        this.name = data.name;
-        this.description = data.description;
-        this.effect = data.effect;
-        this.quantity = quantity > 0 ? quantity : 1;
-        this.position.set(position);
-        this.collision = new CollisionComponent(16, 16);
-        collision.update(position);
-
-        try {
-            this.texture = new Texture(Gdx.files.internal("assets/items/" + itemType.toLowerCase() + ".png"));
-        } catch (Exception e) {
-            Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
-            pixmap.setColor(itemType.equals("COIN") ? Color.YELLOW : Color.GREEN);
-            pixmap.fill();
-            this.texture = new Texture(pixmap);
-            pixmap.dispose();
-        }
-    }
-
-    public Item(Vector2 position, String itemType, String description, int quantity) {
-        super("Item_" + itemType);
+    public Item(Vector2 position, String itemType, int quantity, Texture texture) {
+        super(itemType);
+        this.position = position;
         this.itemType = itemType;
-        this.name = itemType;
-        this.description = description;
-        this.effect = "";
-        this.quantity = quantity > 0 ? quantity : 1;
-        this.position.set(position);
-        this.collision = new CollisionComponent(16, 16);
+        this.quantity = quantity;
+        this.texture = texture;
+        this.collision = new CollisionComponent(32, 32);
+        this.isActive = true;
+        this.value = 1;
         collision.update(position);
-
-        try {
-            this.texture = new Texture(Gdx.files.internal("assets/items/" + itemType.toLowerCase() + ".png"));
-        } catch (Exception e) {
-            Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
-            pixmap.setColor(itemType.equals("COIN") ? Color.YELLOW : Color.GREEN);
-            pixmap.fill();
-            this.texture = new Texture(pixmap);
-            pixmap.dispose();
-        }
     }
 
-    public static Item createRandomItem(Vector2 position) {
-        Random random = new Random();
-        ItemData data = ALL_ITEMS.get(random.nextInt(ALL_ITEMS.size() - 1)); // Исключаем COIN
-        return new Item(position, data, 1);
+    @Override
+    public void update(float deltaTime) {
+        if (isActive && collision != null) {
+            collision.update(position);
+        }
     }
 
     @Override
@@ -111,24 +91,25 @@ public class Item extends GameEntity implements Collidable {
     public String getDescription() { return description; }
     public String getEffect() { return effect; }
     public int getQuantity() { return quantity; }
-    public void increaseQuantity(int amount) { if (amount > 0) quantity += amount; }
-    public void decreaseQuantity(int amount) { if (amount > 0) quantity = Math.max(0, quantity - amount); }
-    public Texture getTexture() { return texture; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
+    public boolean isActive() { return isActive; }
+    public void setActive(boolean active) { this.isActive = active; }
+    public int getValue() { return value; }
+    public void setValue(int value) { this.value = value; }
 
-    public void use() {
-        System.out.println("Использован предмет: " + itemType);
-    }
-
+    @Override
     public void dispose() {
+        super.dispose();
         if (texture != null) {
             texture.dispose();
             texture = null;
         }
+        if (collision != null) {
+            collision = null;
+        }
     }
 
-    public void render(SpriteBatch batch) {
-        if (texture != null) {
-            batch.draw(texture, position.x, position.y);
-        }
+    public Texture getTexture() {
+        return texture;
     }
 }

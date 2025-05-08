@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.rendering.SpriteManager;
+import com.cyberkingdom.items.Item;
 
 public abstract class GameEntity {
     protected Vector2 position;
@@ -38,24 +39,36 @@ public abstract class GameEntity {
     public Texture getTexture() { return texture; }
 
     public void setupAnimations() {
+        initializeTexture(spriteManager);
+    }
+
+    protected void initializeTexture(SpriteManager spriteManager) {
         if (spriteManager == null) {
-            createFallbackTexture();
+            Gdx.app.error("GameEntity", "SpriteManager is null for entity: " + name);
             return;
         }
 
         TextureRegion[] frames = spriteManager.getFrames(name);
-        if (frames == null || frames.length == 0) {
-            createFallbackTexture();
-        } else {
+        if (frames != null && frames.length > 0) {
+            Gdx.app.log("GameEntity", "Found " + frames.length + " frames for entity: " + name);
             for (TextureRegion frame : frames) {
-                animation.addFrame(frame);
+                if (frame != null) {
+                    animation.addFrame(frame);
+                    Gdx.app.log("GameEntity", "Added frame with size: " + frame.getRegionWidth() + "x" + frame.getRegionHeight());
+                } else {
+                    Gdx.app.error("GameEntity", "Null frame found for entity: " + name);
+                }
             }
             animation.setFrameDuration(0.1f);
-            this.texture = frames[0].getTexture();
+            texture = frames[0].getTexture();
+            Gdx.app.log("GameEntity", "Set texture from first frame for: " + name + 
+                " with size: " + texture.getWidth() + "x" + texture.getHeight());
+        } else {
+            Gdx.app.error("GameEntity", "No frames found for entity: " + name);
         }
     }
 
-    protected void createFallbackTexture() {
+    private void createFallbackTexture() {
         int width, height;
         if (name.equals("Platform")) {
             width = 128;
@@ -71,6 +84,7 @@ public abstract class GameEntity {
             height = 48;
         }
 
+        Gdx.app.log("GameEntity", "Creating fallback texture for: " + name + " with size: " + width + "x" + height);
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
         if (name.equals("Platform")) {
             for (int y = 0; y < height; y++) {
@@ -99,13 +113,19 @@ public abstract class GameEntity {
         texture = new Texture(pixmap);
         animation.addFrame(new TextureRegion(texture));
         pixmap.dispose();
+        Gdx.app.log("GameEntity", "Created fallback texture for: " + name + 
+            " with size: " + texture.getWidth() + "x" + texture.getHeight());
     }
 
     public static void setSpriteManager(SpriteManager manager) {
         spriteManager = manager;
+        Gdx.app.log("GameEntity", "SpriteManager set");
     }
 
     public void update(float deltaTime) {
+        if (animation != null) {
+            animation.update(deltaTime);
+        }
     }
 
     public CollisionComponent getCollisionComponent() {
@@ -124,10 +144,7 @@ public abstract class GameEntity {
     }
 
     public void dispose() {
-        if (texture != null) {
-            texture.dispose();
-            texture = null;
-        }
+        texture = null;
         if (animation != null) {
             animation.dispose();
             animation = null;

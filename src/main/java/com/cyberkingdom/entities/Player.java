@@ -6,6 +6,9 @@ import com.cyberkingdom.items.Inventory;
 import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.screens.GameScreen;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class Player extends GameEntity implements Collidable {
     private CollisionComponent collision;
@@ -18,8 +21,21 @@ public class Player extends GameEntity implements Collidable {
     private float health = 100f;
     private float maxHealth = 100f;
     private int coins = 0;
+    private int cryptoCoins = 0;
+    private boolean isFalling = false;
+    private boolean isMoving = false;
+    private boolean isFacingRight = true;
+    private boolean isAttacking = false;
+    private float attackCooldown = 0;
+    private float attackDuration = 0;
+    private float attackRange = 50;
+    private float attackDamage = 20;
+    private float attackCooldownTime = 0.5f;
+    private float attackDurationTime = 0.2f;
     private float gravity = -500f;
     private GameScreen gameScreen;
+    private Texture texture;
+    private AnimationComponent animation;
 
     public Player(Vector2 position, GameScreen gameScreen) {
         super("Player");
@@ -28,7 +44,22 @@ public class Player extends GameEntity implements Collidable {
         this.gameScreen = gameScreen;
         this.collision = new CollisionComponent(64, 64);
         this.inventory = new Inventory();
-        collision.update(position);
+        this.health = 100;
+        this.maxHealth = 100;
+        this.coins = 0;
+        this.cryptoCoins = 0;
+        this.isJumping = false;
+        this.isFalling = false;
+        this.isMoving = false;
+        this.isFacingRight = true;
+        this.isAttacking = false;
+        this.attackCooldown = 0;
+        this.attackDuration = 0;
+        this.attackRange = 50;
+        this.attackDamage = 20;
+        this.attackCooldownTime = 0.5f;
+        this.attackDurationTime = 0.2f;
+        this.collision.update(position);
     }
 
     @Override
@@ -65,10 +96,37 @@ public class Player extends GameEntity implements Collidable {
 
     public void update(float deltaTime) {
         collision.update(position);
+
+        // Ограничения по X
+        float minX = 0;
+        float maxX = 1200 - 64; // 1200 — ширина уровня, 64 — ширина игрока
+
+        if (position.x < minX) {
+            position.x = minX;
+            if (velocity.x < 0) velocity.x = 0; // полностью останавливаем движение влево
+        } else if (position.x > maxX) {
+            position.x = maxX;
+            if (velocity.x > 0) velocity.x = 0; // полностью останавливаем движение вправо
+        }
     }
 
     public void move(float deltaX, float deltaY) {
-        position.add(deltaX, deltaY);
+        float minX = 0;
+        float maxX = 1200 - 64; // 1200 — ширина уровня, 64 — ширина игрока
+
+        float newX = position.x + deltaX;
+
+        if (newX < minX) {
+            position.x = minX;
+            velocity.x = Math.abs(velocity.x) * 0.5f; // небольшой отскок вправо
+        } else if (newX > maxX) {
+            position.x = maxX;
+            velocity.x = -Math.abs(velocity.x) * 0.5f; // небольшой отскок влево
+        } else {
+            position.x = newX;
+        }
+
+        position.y += deltaY;
         collision.update(position);
     }
 
@@ -78,6 +136,25 @@ public class Player extends GameEntity implements Collidable {
             gameScreen.updateCoinCount(coins);
         }
         Gdx.app.debug("Player", "Collected coin, total: " + coins);
+    }
+
+    public void render(SpriteBatch batch) {
+        float x = getPosition().x;
+        float y = getPosition().y;
+        float width = 64;
+        float height = 64;
+
+        if (getAnimation() != null) {
+            TextureRegion currentFrame = getAnimation().getCurrentFrame(Gdx.graphics.getDeltaTime());
+            if (currentFrame != null) {
+                batch.draw(currentFrame, x, y, width, height);
+                return;
+            }
+        }
+
+        if (getTexture() != null) {
+            batch.draw(getTexture(), x, y, width, height);
+        }
     }
 
     @Override
@@ -91,5 +168,13 @@ public class Player extends GameEntity implements Collidable {
             collision = null;
         }
         gameScreen = null;
+        if (texture != null) {
+            texture.dispose();
+            texture = null;
+        }
+        if (animation != null) {
+            animation.dispose();
+            animation = null;
+        }
     }
 }

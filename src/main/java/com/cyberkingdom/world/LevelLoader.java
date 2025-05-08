@@ -72,9 +72,15 @@ public class LevelLoader {
 
     private void createPlatforms() {
         Gdx.app.log("LevelLoader", "Creating platforms");
-        Texture platformTexture = spriteManager.getFrames("Platform")[0].getTexture();
-        float textureWidth = platformTexture.getWidth(); // 64 пикселя
-        float platformWidth = textureWidth * 2; // Делаем платформу в 2 раза шире текстуры (128 пикселей)
+        TextureRegion[] platformFrames = spriteManager.getFrames("Platform");
+        if (platformFrames == null || platformFrames.length == 0) {
+            Gdx.app.error("LevelLoader", "No platform frames found");
+            return;
+        }
+        
+        Texture platformTexture = platformFrames[0].getTexture();
+        float textureWidth = platformTexture.getWidth();
+        float platformWidth = textureWidth * 2;
 
         // Создаем землю
         Rectangle groundPlatform = new Rectangle(0, GROUND_Y, LEVEL_WIDTH, PLATFORM_HEIGHT);
@@ -148,11 +154,14 @@ public class LevelLoader {
         Rectangle platform = getRandomPlatform();
         float x = platform.x + random.nextFloat() * platform.width;
         float y = platform.y + platform.height + 10;
-        
-        GameEntity item = entityFactory.createRandomItem(x, y);
-        if (item != null) {
-            entitySystem.addEntity(item);
-            Gdx.app.debug("LevelLoader", "Spawned random item: " + ((Item)item).getItemType());
+        Vector2 spawnPos = new Vector2(x, y);
+
+        Item coin = entityFactory.createItem("COIN", spawnPos, 1);
+        if (coin != null) {
+            Gdx.app.log("LevelLoader", "Spawning coin at: (" + x + ", " + y + ")");
+            entitySystem.addEntity(coin);
+        } else {
+            Gdx.app.error("LevelLoader", "Failed to create coin at: (" + x + ", " + y + ")");
         }
     }
 
@@ -162,23 +171,19 @@ public class LevelLoader {
             for (int i = 0; i < coinsOnPlatform; i++) {
                 float x = platform.getRectangle().x + random.nextFloat() * (platform.getRectangle().width - 32);
                 float y = platform.getRectangle().y + platform.getRectangle().height + 10;
+                Vector2 spawnPos = new Vector2(x, y);
+                
                 try {
-                    TextureRegion[] coinFrames = spriteManager.getFrames("COIN");
-                    if (coinFrames == null || coinFrames.length == 0) {
-                        Gdx.app.error("LevelLoader", "Failed to get coin frames from SpriteManager");
-                        continue;
+                    Item coin = entityFactory.createItem("COIN", spawnPos, 1);
+                    if (coin != null) {
+                        entitySystem.addEntity(coin);
+                        Gdx.app.log("LevelLoader", String.format(
+                            "Spawned coin at: (%.1f, %.1f)",
+                            x, y
+                        ));
+                    } else {
+                        Gdx.app.error("LevelLoader", "Failed to create coin at: " + x + ", " + y);
                     }
-                    Texture coinTexture = coinFrames[0].getTexture();
-                    if (coinTexture == null) {
-                        Gdx.app.error("LevelLoader", "Failed to get coin texture from frames");
-                        continue;
-                    }
-                    Item coin = new Item(new Vector2(x, y), Item.ITEM_COIN, 1, coinTexture);
-                    entitySystem.addEntity(coin);
-                    Gdx.app.debug("LevelLoader", String.format(
-                        "Spawned coin at: (%.1f, %.1f) with texture: %s",
-                        x, y, coin.getTexture() != null ? "loaded" : "null"
-                    ));
                 } catch (Exception e) {
                     Gdx.app.error("LevelLoader", "Failed to spawn coin: " + e.getMessage(), e);
                 }

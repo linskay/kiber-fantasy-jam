@@ -2,6 +2,7 @@ package com.cyberkingdom.rendering;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.cyberkingdom.entities.GameEntity;
 import com.cyberkingdom.entities.Platform;
 import com.cyberkingdom.items.Item;
@@ -15,38 +16,37 @@ public class SpriteRenderer {
     }
 
     public void render(GameEntity entity) {
-        if (entity == null || entity.getTexture() == null) {
-            Gdx.app.error("SpriteRenderer", "Entity or texture is null");
+        if (entity == null) {
+            Gdx.app.error("SpriteRenderer", "Entity is null");
             return;
         }
 
-        float x = entity.getPosition().x;
-        float y = entity.getPosition().y;
-        float width = 32; // Стандартный размер по умолчанию
-        float height = 32;
-
-        // Специальная обработка для платформ
-        if (entity instanceof Platform) {
+        if (entity instanceof Player) {
+            ((Player) entity).render(batch);
+        } else if (entity instanceof Item) {
+            ((Item) entity).render(batch);
+        } else if (entity instanceof Platform) {
             Platform platform = (Platform) entity;
-            if (platform.isGround()) {
-                Gdx.app.debug("SpriteRenderer", "Пропускаем рендеринг земли (ground platform)");
-                return;
+            if (!platform.isGround()) {
+                platform.render(batch);
             }
-            platform.render(batch);
-            return;
-        }
-        // Специальная обработка для игрока
-        else if (entity instanceof Player) {
-            width = 64;
-            height = 64;
-        }
-        // Специальная обработка для монет
-        else if (entity instanceof Item && ((Item) entity).getItemType().equals(Item.ITEM_COIN)) {
-            width = 32;
-            height = 32;
-        }
+        } else {
+            // Для остальных сущностей используем стандартную отрисовку
+            float x = entity.getPosition().x;
+            float y = entity.getPosition().y;
+            float width = entity.getTexture().getWidth();
+            float height = entity.getTexture().getHeight();
 
-        batch.draw(entity.getTexture(), x, y, width, height);
+            if (entity.getAnimation() != null) {
+                TextureRegion currentFrame = entity.getAnimation().getCurrentFrame(Gdx.graphics.getDeltaTime());
+                if (currentFrame != null) {
+                    batch.draw(currentFrame, x, y, width, height);
+                    return;
+                }
+            }
+
+            batch.draw(entity.getTexture(), x, y, width, height);
+        }
     }
 
     public void begin() {

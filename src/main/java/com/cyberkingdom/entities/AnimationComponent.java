@@ -43,6 +43,16 @@ public class AnimationComponent {
         this.frameDuration = Math.max(0.01f, duration); // Минимальное значение для избежания деления на ноль
     }
 
+    public void update(float deltaTime) {
+        if (!frames.isEmpty()) {
+            stateTime += deltaTime;
+            if (stateTime > frameDuration) {
+                currentFrameIndex = (currentFrameIndex + 1) % frames.size();
+                stateTime = 0f;
+            }
+        }
+    }
+
     public void dispose() {
         if (frames != null) {
             frames.clear();

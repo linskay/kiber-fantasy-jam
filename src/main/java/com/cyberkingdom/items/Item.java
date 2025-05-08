@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.entities.Collidable;
@@ -66,6 +67,7 @@ public class Item extends GameEntity implements Collidable {
         this.collision = new CollisionComponent(32, 32);
         this.isActive = true;
         this.value = 1;
+        this.name = itemType;
         collision.update(position);
     }
 
@@ -86,6 +88,10 @@ public class Item extends GameEntity implements Collidable {
         return collision.getBounds();
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getItemType() { return itemType; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -100,10 +106,7 @@ public class Item extends GameEntity implements Collidable {
     @Override
     public void dispose() {
         super.dispose();
-        if (texture != null) {
-            texture.dispose();
-            texture = null;
-        }
+        texture = null;
         if (collision != null) {
             collision = null;
         }
@@ -111,5 +114,24 @@ public class Item extends GameEntity implements Collidable {
 
     public Texture getTexture() {
         return texture;
+    }
+
+    public void render(SpriteBatch batch) {
+        float x = getPosition().x;
+        float y = getPosition().y;
+        float width = 32;
+        float height = 32;
+
+        if (getAnimation() != null) {
+            TextureRegion currentFrame = getAnimation().getCurrentFrame(Gdx.graphics.getDeltaTime());
+            if (currentFrame != null) {
+                batch.draw(currentFrame, x, y, width, height);
+                return;
+            }
+        }
+
+        if (getTexture() != null) {
+            batch.draw(getTexture(), x, y, width, height);
+        }
     }
 }

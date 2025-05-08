@@ -90,6 +90,17 @@ public class PhysicsSystem {
         // Обновляем позицию
         position.add(velocity.cpy().scl(deltaTime));
 
+        // Ограничения по X
+        float minX = 0;
+        float maxX = 1200 - 64; // 1200 — ширина уровня, 64 — ширина игрока
+        if (position.x < minX) {
+            position.x = minX;
+            if (velocity.x < 0) velocity.x = 0;
+        } else if (position.x > maxX) {
+            position.x = maxX;
+            if (velocity.x > 0) velocity.x = 0;
+        }
+
         // Проверяем столкновение с верхней границей
         if (position.y > MAX_Y_POSITION) {
             position.y = MAX_Y_POSITION;

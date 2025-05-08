@@ -2,6 +2,8 @@ package com.cyberkingdom.entities;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.Gdx;
 import com.cyberkingdom.items.Item;
 import com.cyberkingdom.screens.GameScreen;
 import com.cyberkingdom.rendering.SpriteManager;
@@ -70,19 +72,29 @@ public class EntityFactory {
     }
 
     public Item createItem(String itemType, Vector2 position, int quantity) {
-        for (Item.ItemData data : Item.ALL_ITEMS) {
-            if (data.id.equalsIgnoreCase(itemType)) {
-                String key = data.id.equalsIgnoreCase("COIN") ? "COIN" : data.id;
-                Texture texture = spriteManager.getFrames(key)[0].getTexture();
-                Item item = new Item(position, data.id, quantity, texture);
-                item.name = data.name;
-                item.description = data.description;
-                item.effect = data.effect;
-                return item;
+        try {
+            Gdx.app.log("EntityFactory", "Creating item: " + itemType + " at " + position);
+            TextureRegion[] frames = spriteManager.getFrames(itemType);
+            if (frames == null || frames.length == 0) {
+                Gdx.app.error("EntityFactory", "No frames found for item: " + itemType);
+                return null;
             }
+
+            Texture texture = frames[0].getTexture();
+            if (texture == null) {
+                Gdx.app.error("EntityFactory", "No texture found for item: " + itemType);
+                return null;
+            }
+
+            Item item = new Item(position, itemType, quantity, texture);
+            item.setName(itemType);
+            Gdx.app.log("EntityFactory", "Created item: " + itemType + " with texture size: " + 
+                texture.getWidth() + "x" + texture.getHeight());
+            return item;
+        } catch (Exception e) {
+            Gdx.app.error("EntityFactory", "Failed to create item: " + itemType, e);
+            return null;
         }
-        System.err.println("Неизвестный тип предмета: " + itemType);
-        return null;
     }
 
     public GameEntity createRandomItem(float x, float y) {

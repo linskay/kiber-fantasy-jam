@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.cyberkingdom.physics.CollisionComponent;
+import com.badlogic.gdx.Gdx;
 
 public class Platform extends GameEntity {
     private Rectangle rectangle;
@@ -66,11 +67,13 @@ public class Platform extends GameEntity {
                     currentWidth,
                     rectangle.height,
                     0, 0,
-                    (int)(texture.getWidth() * (currentWidth / textureWidth)),
-                    texture.getHeight(),
+                    (int)(currentWidth),
+                    (int)textureHeight,
                     false, false
                 );
             }
+        } else {
+            Gdx.app.error("Platform", "Texture is null for platform at: " + rectangle);
         }
     }
 

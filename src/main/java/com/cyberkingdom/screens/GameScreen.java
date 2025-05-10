@@ -185,6 +185,9 @@ public class GameScreen implements Screen {
         if (levelMusic != null) {
             levelMusic.dispose();
         }
+        if (itemPickupSystem != null) {
+            itemPickupSystem.dispose();
+        }
     }
 
     public void updateCoinCount(int coins) {

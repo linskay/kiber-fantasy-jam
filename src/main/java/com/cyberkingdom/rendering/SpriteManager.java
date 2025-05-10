@@ -20,17 +20,20 @@ public class SpriteManager {
     public void loadTextures() {
         try {
             // Загружаем основные текстуры
-            loadTexture("assets/platform.png", "Platform");
-            loadTexture("assets/Coin.png", "COIN");
-            loadTexture("assets/entities/player.png", "Player");
-            loadTexture("assets/entities.png", "WITCH_VPN");
-            loadTexture("assets/entities.png", "CAT_MINER");
+            loadTexture("src/main/resources/assets/platform.png", "Platform");
+            loadTexture("src/main/resources/assets/Coin.png", "COIN");
+            loadTexture("src/main/resources/assets/entities/player.png", "Player");
+            loadTexture("src/main/resources/assets/entities.png", "WITCH_VPN");
+            loadTexture("src/main/resources/assets/entities.png", "CAT_MINER");
             
-            // Загружаем текстуры предметов
-            loadTexture("assets/items.png", "HARDWARE_WALLET");
-            loadTexture("assets/items.png", "VPN_TOKEN");
-            loadTexture("assets/items.png", "CRYPTO_COIN");
-            loadTexture("assets/items.png", "USB_SCATTER");
+            
+            // Новые уникальные предметы
+            loadTexture("src/main/resources/assets/items/USB_Skatert.png", "USB_SKATERT");
+            loadTexture("src/main/resources/assets/items/kriptoLopata.png", "CRYPTO_SHOVEL");
+            loadTexture("src/main/resources/assets/items/RTX4090.png", "RTX_4090");
+            loadTexture("src/main/resources/assets/items/tyshonka.png", "TUSHENKA");
+            loadTexture("src/main/resources/assets/items/kniga.png", "KNIGA");
+            loadTexture("src/main/resources/assets/items/key.png", "WIFI_KEY");
             
             Gdx.app.log("SpriteManager", "All textures loaded successfully");
         } catch (Exception e) {
@@ -140,6 +143,20 @@ public class SpriteManager {
         } else {
             Gdx.app.error("SpriteManager", "items texture is null");
         }
+
+        // Новые уникальные предметы
+        Texture usbSkatert = textures.get("USB_SKATERT");
+        if (usbSkatert != null) spriteRegions.put("USB_SKATERT", new TextureRegion[]{new TextureRegion(usbSkatert)});
+        Texture cryptoShovel = textures.get("CRYPTO_SHOVEL");
+        if (cryptoShovel != null) spriteRegions.put("CRYPTO_SHOVEL", new TextureRegion[]{new TextureRegion(cryptoShovel)});
+        Texture rtx4090 = textures.get("RTX_4090");
+        if (rtx4090 != null) spriteRegions.put("RTX_4090", new TextureRegion[]{new TextureRegion(rtx4090)});
+        Texture tushenka = textures.get("TUSHENKA");
+        if (tushenka != null) spriteRegions.put("TUSHENKA", new TextureRegion[]{new TextureRegion(tushenka)});
+        Texture kniga = textures.get("KNIGA");
+        if (kniga != null) spriteRegions.put("KNIGA", new TextureRegion[]{new TextureRegion(kniga)});
+        Texture wifiKey = textures.get("WIFI_KEY");
+        if (wifiKey != null) spriteRegions.put("WIFI_KEY", new TextureRegion[]{new TextureRegion(wifiKey)});
     }
 
     public TextureRegion[] getFrames(String name) {

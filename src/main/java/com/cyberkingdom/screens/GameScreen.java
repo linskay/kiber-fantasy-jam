@@ -20,6 +20,8 @@ import com.cyberkingdom.boss.BossFightLogic;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.audio.Music;
 import com.cyberkingdom.audio.MusicManager;
+import com.cyberkingdom.items.ItemPickupSystem;
+import com.cyberkingdom.items.Item;
 
 public class GameScreen implements Screen {
     private final EntitySystem entitySystem;
@@ -37,6 +39,7 @@ public class GameScreen implements Screen {
     private ShapeRenderer shapeRenderer;
     private SpriteBatch gameBatch;
     private Music levelMusic;
+    private ItemPickupSystem itemPickupSystem;
 
     public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem, LevelLoader levelLoader, 
                      SpriteRenderer spriteRenderer, UIManager uiManager, BossFightLogic bossFightLogic) {
@@ -65,6 +68,12 @@ public class GameScreen implements Screen {
         // Загрузка фона
         background = new Texture(Gdx.files.internal("assets/background_level1.png"));
         
+        // Инициализация системы сбора предметов
+        Player player = physicsSystem.getPlayer();
+        if (player != null) {
+            this.itemPickupSystem = new ItemPickupSystem(entitySystem, player);
+        }
+        
         Gdx.app.log("GameScreen", "Initialized successfully");
     }
 
@@ -74,6 +83,12 @@ public class GameScreen implements Screen {
         physicsSystem.update(delta);
         if (bossFightLogic != null) {
             bossFightLogic.update(delta);
+        }
+        if (itemPickupSystem != null) {
+            itemPickupSystem.update();
+        }
+        if (levelLoader != null) {
+            levelLoader.update(delta, entitySystem, physicsSystem.getPlayer());
         }
         
         // Очистка экрана
@@ -93,11 +108,19 @@ public class GameScreen implements Screen {
         }
         
         // Рендеринг игровых объектов
+        int coinCount = 0;
         for (GameEntity entity : entitySystem.getEntities()) {
-            if (entity.isActive() && !(entity instanceof Player)) {
-                spriteRenderer.render(entity);
+            if (entity.isActive()) {
+                if (entity instanceof Item && ((Item) entity).getItemType().equals("COIN")) {
+                    coinCount++;
+                    Gdx.app.debug("GameScreen", "Rendering coin at: " + entity.getPosition());
+                }
+                if (!(entity instanceof Player)) {
+                    spriteRenderer.render(entity);
+                }
             }
         }
+        Gdx.app.debug("GameScreen", "Total coins on screen: " + coinCount);
         
         // Рендеринг игрока поверх остальных объектов
         Player player = physicsSystem.getPlayer();

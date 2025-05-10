@@ -40,7 +40,7 @@ public class Inventory {
         }
         if (items.size() < capacity) {
             // Создаем копию предмета, чтобы отделить инвентарь от игрового объекта
-            Item copy = new Item(newItem.getPosition(), newItem.getItemType(), newItem.getDescription(), newItem.getQuantity(), newItem.getTexture());
+            Item copy = new Item(newItem.getItemType(), newItem.getPosition(), newItem.getQuantity());
             items.add(copy);
             return true;
         }

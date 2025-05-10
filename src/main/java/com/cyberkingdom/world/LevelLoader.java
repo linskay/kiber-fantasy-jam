@@ -32,6 +32,13 @@ public class LevelLoader {
     private static final float MIN_PLATFORM_Y = 125f;  // Минимальная высота платформы
     private static final float MAX_PLATFORM_Y = 600f;  // Максимальная высота платформы
     private static final float PLATFORM_SPACING = 150f; // Увеличиваем минимальное расстояние между платформами
+    private static final String[] UNIQUE_ITEMS = {
+        "USB_SKATERT", "CRYPTO_SHOVEL", "RTX_4090", "TUSHENKA", "KNIGA", "WIFI_KEY"
+    };
+    private float coinSpawnTimer = 0f;
+    private static final float MIN_COIN_SPAWN_INTERVAL = 2f;
+    private static final float MAX_COIN_SPAWN_INTERVAL = 5f;
+    private float nextCoinSpawnTime;
 
     public LevelLoader(SpriteManager spriteManager, EntitySystem entitySystem, PhysicsSystem physicsSystem, EntityFactory entityFactory, int level) {
         EntityFactory.resetItemCounter();
@@ -60,11 +67,19 @@ public class LevelLoader {
             entitySystem.addEntity(platform);
             Gdx.app.log("LevelLoader", "Added platform to systems: " + platform.getRectangle());
         }
-
+        // Получаем игрока для проверки инвентаря
+        Player player = null;
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (entity instanceof Player) {
+                player = (Player) entity;
+                break;
+            }
+        }
+        // Спавним уникальные предметы только если их нет в инвентаре
+        spawnUniqueItemsOnMap(entitySystem, player);
         // Спавним предметы
         spawnItemsOnMap(entitySystem);
         Gdx.app.log("LevelLoader", "Spawned " + totalItems + " items");
-
         // Начальный спавн монет
         spawnCoins(entitySystem);
         Gdx.app.log("LevelLoader", "Level generation completed");
@@ -167,28 +182,28 @@ public class LevelLoader {
 
     private void spawnCoins(EntitySystem entitySystem) {
         for (Platform platform : platforms) {
-            int coinsOnPlatform = 1 + random.nextInt(2);
-            for (int i = 0; i < coinsOnPlatform; i++) {
-                float x = platform.getRectangle().x + random.nextFloat() * (platform.getRectangle().width - 32);
-                float y = platform.getRectangle().y + platform.getRectangle().height + 10;
-                Vector2 spawnPos = new Vector2(x, y);
-                
-                try {
-                    Item coin = entityFactory.createItem("COIN", spawnPos, 1);
-                    if (coin != null) {
-                        entitySystem.addEntity(coin);
-                        Gdx.app.log("LevelLoader", String.format(
-                            "Spawned coin at: (%.1f, %.1f)",
-                            x, y
-                        ));
-                    } else {
-                        Gdx.app.error("LevelLoader", "Failed to create coin at: " + x + ", " + y);
-                    }
-                } catch (Exception e) {
-                    Gdx.app.error("LevelLoader", "Failed to spawn coin: " + e.getMessage(), e);
+            // Спавним только одну монетку на платформу
+            float x = platform.getRectangle().x + random.nextFloat() * (platform.getRectangle().width - 32);
+            float y = platform.getRectangle().y + platform.getRectangle().height + 10;
+            Vector2 spawnPos = new Vector2(x, y);
+            
+            try {
+                Item coin = entityFactory.createItem("COIN", spawnPos, 1);
+                if (coin != null) {
+                    entitySystem.addEntity(coin);
+                    Gdx.app.log("LevelLoader", String.format(
+                        "Spawned coin at: (%.1f, %.1f)",
+                        x, y
+                    ));
+                } else {
+                    Gdx.app.error("LevelLoader", "Failed to create coin at: " + x + ", " + y);
                 }
+            } catch (Exception e) {
+                Gdx.app.error("LevelLoader", "Failed to spawn coin: " + e.getMessage(), e);
             }
         }
+        // Устанавливаем время следующего спавна
+        nextCoinSpawnTime = MIN_COIN_SPAWN_INTERVAL + random.nextFloat() * (MAX_COIN_SPAWN_INTERVAL - MIN_COIN_SPAWN_INTERVAL);
     }
 
     public void update(float deltaTime, EntitySystem entitySystem, Player player) {
@@ -210,6 +225,33 @@ public class LevelLoader {
         }
         if (!catMinerExists) {
             catMinerActive = false;
+        }
+
+        // Обновляем таймер спавна монеток
+        coinSpawnTimer += deltaTime;
+        if (coinSpawnTimer >= nextCoinSpawnTime) {
+            // Спавним одну случайную монетку
+            Rectangle platform = getRandomPlatform();
+            float x = platform.x + random.nextFloat() * (platform.width - 32);
+            float y = platform.y + platform.height + 10;
+            Vector2 spawnPos = new Vector2(x, y);
+            
+            try {
+                Item coin = entityFactory.createItem("COIN", spawnPos, 1);
+                if (coin != null) {
+                    entitySystem.addEntity(coin);
+                    Gdx.app.log("LevelLoader", String.format(
+                        "Spawned random coin at: (%.1f, %.1f)",
+                        x, y
+                    ));
+                }
+            } catch (Exception e) {
+                Gdx.app.error("LevelLoader", "Failed to spawn random coin: " + e.getMessage(), e);
+            }
+            
+            // Сбрасываем таймер и устанавливаем новое время спавна
+            coinSpawnTimer = 0f;
+            nextCoinSpawnTime = MIN_COIN_SPAWN_INTERVAL + random.nextFloat() * (MAX_COIN_SPAWN_INTERVAL - MIN_COIN_SPAWN_INTERVAL);
         }
     }
 
@@ -263,6 +305,35 @@ public class LevelLoader {
         } finally {
             if (pm != null) {
                 pm.dispose();
+            }
+        }
+    }
+
+    private void spawnUniqueItemsOnMap(EntitySystem entitySystem, Player player) {
+        List<Rectangle> usedPlatforms = new ArrayList<>();
+        Random rand = new Random();
+        for (String itemType : UNIQUE_ITEMS) {
+            // Проверяем, есть ли предмет уже в инвентаре
+            boolean alreadyInInventory = false;
+            if (player != null) {
+                alreadyInInventory = player.getInventory().getItems().stream()
+                    .anyMatch(item -> item.getItemType().equals(itemType));
+            }
+            if (alreadyInInventory) continue;
+            Rectangle platform;
+            do {
+                platform = getRandomPlatform();
+            } while (usedPlatforms.contains(platform) && usedPlatforms.size() < platforms.size());
+            usedPlatforms.add(platform);
+            float x = platform.x + rand.nextFloat() * platform.width;
+            float y = platform.y + platform.height + 10;
+            Vector2 spawnPos = new Vector2(x, y);
+            Item item = entityFactory.createItem(itemType, spawnPos, 1);
+            if (item != null) {
+                Gdx.app.log("LevelLoader", "Spawning unique item " + itemType + " at: (" + x + ", " + y + ")");
+                entitySystem.addEntity(item);
+            } else {
+                Gdx.app.error("LevelLoader", "Failed to create unique item " + itemType + " at: (" + x + ", " + y + ")");
             }
         }
     }

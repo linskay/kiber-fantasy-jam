@@ -17,7 +17,8 @@ public class EntityFactory {
 
     // Используйте enum или константы, чтобы избежать ошибок в строках
     private static final String[] ITEMS = {
-            "CRYPTO_COIN", "VPN_TOKEN", "USB_SCATERT", "HARDWARE_WALLET"
+     
+            "USB_SKATERT", "CRYPTO_SHOVEL", "RTX_4090", "TUSHENKA", "KNIGA", "WIFI_KEY"
     };
 
     public EntityFactory(SpriteManager spriteManager) {
@@ -86,7 +87,16 @@ public class EntityFactory {
                 return null;
             }
 
-            Item item = new Item(position, itemType, quantity, texture);
+            // Находим описание предмета
+            String description = "";
+            for (Item.ItemData data : Item.ALL_ITEMS) {
+                if (data.id.equals(itemType)) {
+                    description = data.description + "\n\"" + data.effect + "\"";
+                    break;
+                }
+            }
+
+            Item item = new Item(itemType, position, quantity);
             item.setName(itemType);
             Gdx.app.log("EntityFactory", "Created item: " + itemType + " with texture size: " + 
                 texture.getWidth() + "x" + texture.getHeight());

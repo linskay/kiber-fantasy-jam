@@ -35,6 +35,12 @@ public class Item extends GameEntity implements Collidable {
     public static final String ITEM_VPN_TOKEN = "VPN_TOKEN";
     public static final String ITEM_USB_SCATTER = "USB_SCATTER";
     public static final String ITEM_HARDWARE_WALLET = "HARDWARE_WALLET";
+    public static final String ITEM_USB_SKATERT = "USB_SKATERT";
+    public static final String ITEM_CRYPTO_SHOVEL = "CRYPTO_SHOVEL";
+    public static final String ITEM_RTX_4090 = "RTX_4090";
+    public static final String ITEM_TUSHENKA = "TUSHENKA";
+    public static final String ITEM_KNIGA = "KNIGA";
+    public static final String ITEM_WIFI_KEY = "WIFI_KEY";
 
     public static class ItemData {
         public final String id;
@@ -55,20 +61,23 @@ public class Item extends GameEntity implements Collidable {
         new ItemData(ITEM_CRYPTO_COIN, "Криптомонета", "Цифровая валюта", "Увеличивает счетчик криптомонет"),
         new ItemData(ITEM_VPN_TOKEN, "VPN Токен", "Токен для VPN", "Дает временную защиту"),
         new ItemData(ITEM_USB_SCATTER, "USB Scatter", "USB устройство", "Увеличивает скорость"),
-        new ItemData(ITEM_HARDWARE_WALLET, "Аппаратный кошелек", "Защищенный кошелек", "Увеличивает защиту")
+        new ItemData(ITEM_HARDWARE_WALLET, "Аппаратный кошелек", "Защищенный кошелек", "Увеличивает защиту"),
+        new ItemData(ITEM_USB_SKATERT, "USB-Скатерть", "Восстанавливает 50% HP", "Самобранка 2.0"),
+        new ItemData(ITEM_CRYPTO_SHOVEL, "Крипто-Лопата", "Ломает стены (скрытые блоки)", "Digging to the Moon"),
+        new ItemData(ITEM_RTX_4090, "RTX 4090", "+50% скорости на 10 сек", "Дрова от Бабы-Яги"),
+        new ItemData(ITEM_TUSHENKA, "Банка тушёнки", "Временная броня", "Золотой запас сисадмина"),
+        new ItemData(ITEM_KNIGA, "Грокаем алгоритмы", "Открывает секреты (карта)", "Библия backend-разработчика"),
+        new ItemData(ITEM_WIFI_KEY, "WiFi-Ключ", "Нужен для финального босса", "Пароль: 12345678")
     );
 
-    public Item(Vector2 position, String itemType, int quantity, Texture texture) {
+    public Item(String itemType, Vector2 position, int quantity) {
         super(itemType);
-        this.position = position;
         this.itemType = itemType;
+        this.position = position;
         this.quantity = quantity;
-        this.texture = texture;
-        this.collision = new CollisionComponent(32, 32);
         this.isActive = true;
-        this.value = 1;
-        this.name = itemType;
-        collision.update(position);
+        this.collision = new CollisionComponent(32, 32);
+        this.collision.update(position);
     }
 
     @Override
@@ -133,5 +142,13 @@ public class Item extends GameEntity implements Collidable {
         if (getTexture() != null) {
             batch.draw(getTexture(), x, y, width, height);
         }
+    }
+
+    public void increaseQuantity(int amount) {
+        this.quantity += amount;
+    }
+
+    public void decreaseQuantity(int amount) {
+        this.quantity = Math.max(0, this.quantity - amount);
     }
 }

@@ -8,6 +8,7 @@ import com.cyberkingdom.entities.GameEntity;
 import com.cyberkingdom.entities.Player;
 import com.cyberkingdom.input.InputHandler;
 import com.cyberkingdom.items.Item;
+import com.badlogic.gdx.audio.Sound;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,10 +23,13 @@ public class PhysicsSystem {
     private static final float MAX_Y_POSITION = 700f; // Максимальная высота экрана
     private static final float BOUNCE_VELOCITY = -500f; // Скорость отскока
     private boolean isPlayerInitialized = false;
+    private Sound coinSound;
 
     public PhysicsSystem(EntitySystem entitySystem) {
         this.entitySystem = entitySystem;
         this.platforms = new ArrayList<>();
+        // Загружаем звук монетки
+        coinSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/coin.mp3"));
     }
 
     private void initializePlayer() {
@@ -169,6 +173,7 @@ public class PhysicsSystem {
                 Item coin = (Item) entity;
                 if (coin.isActive() && player.getCollisionComponent().getBounds().overlaps(coin.getCollisionComponent().getBounds())) {
                     player.collectCoin();
+                    if (coinSound != null) coinSound.play();
                     coin.setActive(false);
                     entitySystem.removeEntity(coin);
                 }
@@ -183,6 +188,9 @@ public class PhysicsSystem {
         }
         if (inputHandler != null) {
             inputHandler = null;
+        }
+        if (coinSound != null) {
+            coinSound.dispose();
         }
         player = null;
         entitySystem = null;

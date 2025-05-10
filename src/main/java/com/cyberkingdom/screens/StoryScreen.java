@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.cyberkingdom.gameengine.GameEngine;
+import com.cyberkingdom.audio.MusicManager;
 
 public class StoryScreen implements Screen {
     private final GameEngine engine;
@@ -209,8 +210,16 @@ public class StoryScreen implements Screen {
         font.getData().setScale(1.0f);
     }
 
-    @Override public void show() {}
-    @Override public void hide() { engine.resumeMusic(); }
-    @Override public void pause() {}
-    @Override public void resume() {}
+    @Override
+    public void show() {
+        MusicManager.play("assets/musics/menu.mp3", true);
+        // ... остальной код show ...
+    }
+
+    @Override
+    public void hide() { engine.resumeMusic(); }
+    @Override
+    public void pause() {}
+    @Override
+    public void resume() {}
 }

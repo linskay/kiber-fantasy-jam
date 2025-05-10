@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
@@ -18,6 +19,8 @@ import com.cyberkingdom.gameengine.GameEngine;
 import com.cyberkingdom.input.InputHandler;
 import com.cyberkingdom.items.InventoryWindow;
 import com.cyberkingdom.rendering.SpriteRenderer;
+import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
 public class UIManager {
     private InventoryUI inventoryUI;
@@ -30,6 +33,7 @@ public class UIManager {
     private GameEngine engine;
     private SpriteBatch uiBatch;
     private ShapeRenderer shapeRenderer;
+    private SpriteManager spriteManager;
 
     public UIManager(SpriteRenderer spriteRenderer, Player player, InputHandler inputHandler, GameEngine engine) {
         this.inputHandler = inputHandler;
@@ -39,7 +43,18 @@ public class UIManager {
         this.stage = new Stage(new ScreenViewport());
         this.uiBatch = new SpriteBatch();
         this.shapeRenderer = new ShapeRenderer();
-        this.font = new BitmapFont();
+        this.spriteManager = spriteRenderer.getSpriteManager();
+
+        // Используем arial.ttf для поддержки кириллицы
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 15;
+        parameter.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<> ";
+        parameter.borderWidth = 2f;
+        parameter.borderColor = Color.WHITE;
+        parameter.color = Color.valueOf("#D6A4FF");
+        this.font = generator.generateFont(parameter);
+        generator.dispose();
 
         initializeUIComponents(player);
     }
@@ -85,17 +100,18 @@ public class UIManager {
     }
 
     public void render(Player player) {
-        uiBatch.begin();
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
         healthBar.render(player, shapeRenderer);
-
-        font.setColor(Color.YELLOW);
-        font.draw(uiBatch, "Coins: " + player.getCoins(), 220, 90);
-        font.setColor(Color.WHITE);
-        font.draw(uiBatch, "Inventory (E)", 220, 70);
-
         shapeRenderer.end();
+
+        uiBatch.begin();
+        TextureRegion[] coinRegions = spriteManager.getFrames("COIN");
+        if (coinRegions != null && coinRegions.length > 0) {
+            uiBatch.draw(coinRegions[0], 60, 48, 24, 24);
+        }
+        font.draw(uiBatch, "Дай.Токенов: " + player.getCoins(), 90, 65);
+        font.setColor(Color.WHITE);
+        font.draw(uiBatch, "sudo ls /Кэш(Е)", 90, 45);
         uiBatch.end();
 
         inventoryWindow.setVisible(inputHandler.isInventoryVisible());

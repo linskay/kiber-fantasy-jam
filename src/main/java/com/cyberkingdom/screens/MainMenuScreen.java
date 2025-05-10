@@ -16,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.cyberkingdom.gameengine.GameEngine;
+import com.cyberkingdom.audio.MusicManager;
 
 public class MainMenuScreen implements Screen {
     private final GameEngine engine;
@@ -366,7 +367,10 @@ public class MainMenuScreen implements Screen {
 
     @Override public void pause() {}
     @Override public void resume() {}
-    @Override public void show() {}
+    @Override public void show() {
+        MusicManager.play("assets/musics/menu.mp3", true);
+        // ... остальной код show ...
+    }
     public Texture getBackgroundTexture() {
         return backgroundTexture;
     }

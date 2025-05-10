@@ -10,9 +10,15 @@ import com.cyberkingdom.entities.Player;
 
 public class SpriteRenderer {
     private final SpriteBatch batch;
+    private final SpriteManager spriteManager;
 
     public SpriteRenderer() {
         this.batch = new SpriteBatch();
+        this.spriteManager = new SpriteManager();
+    }
+
+    public SpriteManager getSpriteManager() {
+        return spriteManager;
     }
 
     public void render(GameEntity entity) {

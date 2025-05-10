@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.cyberkingdom.gameengine.GameEngine;
+import com.cyberkingdom.audio.MusicManager;
 
 public class AchievementsScreen implements Screen {
     private final GameEngine engine;
@@ -184,8 +185,15 @@ public class AchievementsScreen implements Screen {
         shapeRenderer.dispose();
     }
 
+    @Override
+    public void show() {
+        MusicManager.play("assets/musics/menu.mp3", true);
+        // ... остальной код show ...
+    }
+
+    @Override
+    public void hide() {}
+
     @Override public void pause() {}
     @Override public void resume() {}
-    @Override public void show() {}
-    @Override public void hide() {}
 }

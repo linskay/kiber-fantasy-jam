@@ -17,6 +17,9 @@ import com.cyberkingdom.world.LevelLoader;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.cyberkingdom.boss.BossFightLogic;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.audio.Music;
+import com.cyberkingdom.audio.MusicManager;
 
 public class GameScreen implements Screen {
     private final EntitySystem entitySystem;
@@ -33,6 +36,7 @@ public class GameScreen implements Screen {
     private Texture background;
     private ShapeRenderer shapeRenderer;
     private SpriteBatch gameBatch;
+    private Music levelMusic;
 
     public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem, LevelLoader levelLoader, 
                      SpriteRenderer spriteRenderer, UIManager uiManager, BossFightLogic bossFightLogic) {
@@ -106,14 +110,6 @@ public class GameScreen implements Screen {
             uiManager.render(physicsSystem.getPlayer());
         }
         
-        // Рендеринг счетчика монет
-        if (player != null) {
-            font.setColor(Color.YELLOW);
-            font.draw(spriteRenderer.getBatch(), 
-                     "Монеты: " + player.getCoins(), 
-                     20, 50);
-        }
-        
         spriteRenderer.getBatch().end();
     }
 
@@ -124,10 +120,21 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        int levelNumber = 1;
+        if (levelLoader != null) {
+            levelNumber = levelLoader.getLevelNumber();
+        }
+        String musicPath = "assets/musics/level1.mp3";
+        if (levelNumber == 2) musicPath = "assets/musics/level2.mp3";
+        if (levelNumber == 3) musicPath = "assets/musics/level3.mp3";
+        MusicManager.play(musicPath, true);
     }
 
     @Override
     public void hide() {
+        if (levelMusic != null) {
+            levelMusic.stop();
+        }
     }
 
     @Override
@@ -151,6 +158,9 @@ public class GameScreen implements Screen {
         }
         if (gameBatch != null) {
             gameBatch.dispose();
+        }
+        if (levelMusic != null) {
+            levelMusic.dispose();
         }
     }
 

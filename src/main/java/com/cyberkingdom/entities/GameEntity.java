@@ -21,6 +21,7 @@ public abstract class GameEntity {
     protected SpriteManager spriteManager;
     protected Texture texture;
     protected CollisionComponent collision;
+    protected static final float DEFAULT_SIZE = 64f;
 
     public GameEntity(String name, SpriteManager spriteManager) {
         this.name = name;
@@ -43,7 +44,7 @@ public abstract class GameEntity {
     public String getName() { return name; }
     public Texture getTexture() { return texture; }
 
-    public void setupAnimations() {
+    protected void setupAnimations() {
         initializeTexture(spriteManager);
     }
 
@@ -65,54 +66,83 @@ public abstract class GameEntity {
     }
 
     private void createFallbackTexture() {
-        int width, height;
-        if (name.equals("Platform")) {
-            width = 128;
-            height = 32;
-        } else if (name.equals("COIN")) {
-            width = 32;
-            height = 32;
-        } else if (name.equals("Player")) {
-            width = 64;
-            height = 64;
-        } else {
-            width = 48;
-            height = 48;
-        }
+        int width = getDefaultWidth();
+        int height = getDefaultHeight();
 
-        Gdx.app.log("GameEntity", "Creating fallback texture for: " + name + " with size: " + width + "x" + height);
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        if (name.equals("Platform")) {
-            for (int y = 0; y < height; y++) {
-                float intensity = 0.5f + (y / (float)height) * 0.2f;
-                pixmap.setColor(intensity, intensity, intensity, 1f);
-                pixmap.drawLine(0, y, width - 1, y);
-            }
-        } else if (name.equals("COIN")) {
-            pixmap.setColor(1f, 0.8f, 0f, 1f);
-            pixmap.fillCircle(width/2, height/2, width/2 - 2);
-            pixmap.setColor(1f, 1f, 0.8f, 0.8f);
-            pixmap.fillCircle(width/3, height/3, width/8);
-            pixmap.setColor(0.8f, 0.6f, 0f, 1f);
-            pixmap.drawCircle(width/2, height/2, width/2 - 2);
-        } else if (name.equals("Player")) {
-            pixmap.setColor(0f, 0.5f, 1f, 1f);
-            pixmap.fill();
-            pixmap.setColor(0f, 0.3f, 0.8f, 1f);
-            pixmap.fillRectangle(width/4, height/4, width/2, height/2);
-        } else {
-            pixmap.setColor(1f, 0.2f, 0.2f, 1f);
-            pixmap.fill();
-            pixmap.setColor(0.8f, 0f, 0f, 1f);
-            pixmap.drawRectangle(width/8, height/8, width*3/4, height*3/4);
-        }
+        createFallbackPixmap(pixmap, width, height);
+        
         texture = new Texture(pixmap);
         Array<TextureRegion> frames = new Array<>();
         frames.add(new TextureRegion(texture));
         animation.addAnimation(frames);
         pixmap.dispose();
-        Gdx.app.log("GameEntity", "Created fallback texture for: " + name + 
-            " with size: " + texture.getWidth() + "x" + texture.getHeight());
+    }
+
+    protected int getDefaultWidth() {
+        switch (name) {
+            case "Platform": return 128;
+            case "COIN": return 32;
+            case "Player": return 64;
+            default: return 48;
+        }
+    }
+
+    protected int getDefaultHeight() {
+        switch (name) {
+            case "Platform": return 32;
+            case "COIN": return 32;
+            case "Player": return 64;
+            default: return 48;
+        }
+    }
+
+    protected void createFallbackPixmap(Pixmap pixmap, int width, int height) {
+        switch (name) {
+            case "Platform":
+                createPlatformPixmap(pixmap, width, height);
+                break;
+            case "COIN":
+                createCoinPixmap(pixmap, width, height);
+                break;
+            case "Player":
+                createPlayerPixmap(pixmap, width, height);
+                break;
+            default:
+                createDefaultPixmap(pixmap, width, height);
+                break;
+        }
+    }
+
+    private void createPlatformPixmap(Pixmap pixmap, int width, int height) {
+        for (int y = 0; y < height; y++) {
+            float intensity = 0.5f + (y / (float)height) * 0.2f;
+            pixmap.setColor(intensity, intensity, intensity, 1f);
+            pixmap.drawLine(0, y, width - 1, y);
+        }
+    }
+
+    private void createCoinPixmap(Pixmap pixmap, int width, int height) {
+        pixmap.setColor(1f, 0.8f, 0f, 1f);
+        pixmap.fillCircle(width/2, height/2, width/2 - 2);
+        pixmap.setColor(1f, 1f, 0.8f, 0.8f);
+        pixmap.fillCircle(width/3, height/3, width/8);
+        pixmap.setColor(0.8f, 0.6f, 0f, 1f);
+        pixmap.drawCircle(width/2, height/2, width/2 - 2);
+    }
+
+    private void createPlayerPixmap(Pixmap pixmap, int width, int height) {
+        pixmap.setColor(0f, 0.5f, 1f, 1f);
+        pixmap.fill();
+        pixmap.setColor(0f, 0.3f, 0.8f, 1f);
+        pixmap.fillRectangle(width/4, height/4, width/2, height/2);
+    }
+
+    private void createDefaultPixmap(Pixmap pixmap, int width, int height) {
+        pixmap.setColor(1f, 0.2f, 0.2f, 1f);
+        pixmap.fill();
+        pixmap.setColor(0.8f, 0f, 0f, 1f);
+        pixmap.drawRectangle(width/8, height/8, width*3/4, height*3/4);
     }
 
     public void update(float deltaTime) {
@@ -137,7 +167,10 @@ public abstract class GameEntity {
     }
 
     public void dispose() {
-        texture = null;
+        if (texture != null) {
+            texture.dispose();
+            texture = null;
+        }
         if (animation != null) {
             animation.dispose();
             animation = null;
@@ -152,8 +185,8 @@ public abstract class GameEntity {
 
         float x = position.x;
         float y = position.y;
-        float width = 64;
-        float height = 64;
+        float width = DEFAULT_SIZE;
+        float height = DEFAULT_SIZE;
 
         if (animation != null) {
             TextureRegion currentFrame = animation.getCurrentFrame(Gdx.graphics.getDeltaTime());

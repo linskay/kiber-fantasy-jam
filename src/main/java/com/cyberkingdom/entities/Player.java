@@ -14,67 +14,74 @@ import com.cyberkingdom.items.Item;
 import com.cyberkingdom.rendering.SpriteManager;
 
 public class Player extends GameEntity implements Collidable {
-    private CollisionComponent collision;
+    private static final float MOVE_SPEED = 300f;
+    private static final float JUMP_VELOCITY = 500f;
+    private static final float GRAVITY = -1000f;
+    private static final float ATTACK_RANGE = 50f;
+    private static final float ATTACK_DAMAGE = 20f;
+    private static final float ATTACK_COOLDOWN = 0.5f;
+    private static final float ATTACK_DURATION = 0.2f;
+    private static final float INVULNERABILITY_DURATION = 1.0f;
+    private static final float DEATH_DURATION = 1.0f;
+    private static final float RESPAWN_DURATION = 1.0f;
+    private static final float RESPAWN_INVULNERABILITY_DURATION = 2.0f;
+    private static final int MAX_JUMPS = 2;
+    private static final int ANIMATION_IDLE = 0;
+    private static final int ANIMATION_RUN_LEFT = 1;
+    private static final int ANIMATION_RUN_RIGHT = 2;
+    private static final int ANIMATION_DEATH = 3;
+    private static final float PLAYER_SIZE = 64f;
+    private static final float LEVEL_WIDTH = 1200f;
+
     private Inventory inventory;
     private boolean isJumping;
     private boolean onGround;
-    private int jumpsLeft = 2; // Максимальное количество прыжков
-    private float jumpVelocity = 400f;
-    private float moveSpeed = 200f;
-    private float health = 100f;
-    private float maxHealth = 100f;
-    private int coins = 0;
-    private int cryptoCoins = 0;
-    private boolean isFalling = false;
-    private boolean isMoving = false;
-    private boolean isFacingRight = true;
-    private boolean isAttacking = false;
-    private float attackCooldown = 0;
-    private float attackDuration = 0;
-    private float attackRange = 50;
-    private float attackDamage = 20;
-    private float attackCooldownTime = 0.5f;
-    private float attackDurationTime = 0.2f;
-    private float gravity = -500f;
-    private GameScreen gameScreen;
-    private Texture texture;
-    private AnimationComponent animation;
-    private float jumpForce = 400f;
-    private float direction = 1;
-    private boolean isInvulnerable = false;
-    private float invulnerabilityTime = 0;
-    private float invulnerabilityDuration = 1.0f;
-    private boolean isDead = false;
-    private float deathTime = 0;
-    private float deathDuration = 1.0f;
+    private int jumpsLeft;
+    private float health;
+    private float maxHealth;
+    private int coins;
+    private int cryptoCoins;
+    private boolean isFalling;
+    private boolean isMoving;
+    private boolean isFacingRight;
+    private boolean isAttacking;
+    private float attackCooldown;
+    private float attackDuration;
+    private float invulnerabilityTime;
+    private boolean isInvulnerable;
+    private boolean isDead;
+    private float deathTime;
     private Vector2 respawnPosition;
     private float respawnHealth;
     private int respawnCoins;
     private Inventory respawnInventory;
-    private boolean isRespawned = false;
-    private float respawnTime = 0;
-    private float respawnDuration = 1.0f;
-    private boolean isRespawnInvulnerable = false;
-    private float respawnInvulnerabilityTime = 0;
-    private float respawnInvulnerabilityDuration = 2.0f;
+    private boolean isRespawned;
+    private float respawnTime;
+    private boolean isRespawnInvulnerable;
+    private float respawnInvulnerabilityTime;
+    private GameScreen gameScreen;
     private Rectangle bounds;
-    private static final int ANIMATION_IDLE = 0;
-    private static final int ANIMATION_RUN_LEFT = 1;
-    private static final int ANIMATION_RUN_RIGHT = 2;
-    private static final float MOVE_SPEED = 300f;
-    private static final float JUMP_VELOCITY = 500f;
-    private static final float GRAVITY = -1000f;
-    private static final int ANIMATION_DEATH = 3;
+    private CollisionComponent collision;
+    private AnimationComponent animation;
+    private float jumpForce = 400f;
+    private float direction = 1;
+    private float attackCooldownTime = 0.5f;
+    private float attackDurationTime = 0.2f;
+    private float gravity = -500f;
+    private float deathDuration = 1.0f;
+    private float respawnDuration = 1.0f;
+    private float respawnInvulnerabilityDuration = 2.0f;
+    private float respawnInvulnerabilityDurationTime = 0;
 
     public Player(Vector2 position, SpriteManager spriteManager) {
         super("Player", spriteManager);
+        initializePlayer(position);
+    }
+
+    private void initializePlayer(Vector2 position) {
         this.position = position;
         this.velocity = new Vector2();
-        this.moveSpeed = 200f;
-        this.jumpForce = 400f;
-        this.gravity = 980f;
-        this.isJumping = false;
-        this.isFacingRight = true;
+        this.jumpsLeft = MAX_JUMPS;
         this.health = 100;
         this.maxHealth = 100;
         this.coins = 0;
@@ -82,37 +89,10 @@ public class Player extends GameEntity implements Collidable {
         this.inventory = new Inventory(spriteManager);
         this.respawnPosition = new Vector2(position);
         this.respawnInventory = new Inventory(spriteManager);
-        this.collision = new CollisionComponent(32, 32);
+        this.collision = new CollisionComponent(PLAYER_SIZE, PLAYER_SIZE);
         this.collision.update(position);
-        this.isFalling = false;
-        this.isMoving = false;
-        this.isAttacking = false;
-        this.attackCooldown = 0;
-        this.attackDuration = 0;
-        this.attackRange = 50;
-        this.attackDamage = 20;
-        this.attackCooldownTime = 0.5f;
-        this.attackDurationTime = 0.2f;
-        this.isInvulnerable = false;
-        this.invulnerabilityTime = 0;
-        this.invulnerabilityDuration = 1.0f;
-        this.isDead = false;
-        this.deathTime = 0;
-        this.deathDuration = 1.0f;
-        this.respawnHealth = maxHealth;
-        this.respawnCoins = coins;
-        if (inventory != null && inventory.getItems() != null) {
-            for (Item item : inventory.getItems()) {
-                respawnInventory.addItem(item);
-            }
-        }
-        this.isRespawned = false;
-        this.respawnTime = 0;
-        this.respawnDuration = 1.0f;
-        this.isRespawnInvulnerable = false;
-        this.respawnInvulnerabilityTime = 0;
-        this.respawnInvulnerabilityDuration = 2.0f;
-        this.bounds = new Rectangle(position.x, position.y, 32, 32);
+        this.isFacingRight = true;
+        this.bounds = new Rectangle(position.x, position.y, PLAYER_SIZE, PLAYER_SIZE);
         
         // Инициализируем анимацию
         this.animation = new AnimationComponent();
@@ -184,7 +164,7 @@ public class Player extends GameEntity implements Collidable {
     public void setOnGround(boolean onGround) { 
         this.onGround = onGround;
         if (onGround) {
-            jumpsLeft = 2; // Восстанавливаем прыжки при приземлении
+            jumpsLeft = MAX_JUMPS;
             isJumping = false;
         }
     }
@@ -202,14 +182,24 @@ public class Player extends GameEntity implements Collidable {
         return jumpsLeft;
     }
     public float getJumpVelocity() {
-        return jumpVelocity;
+        return JUMP_VELOCITY;
     }
     public float getMoveSpeed() {
-        return moveSpeed;
+        return MOVE_SPEED;
     }
     public float getHealth() { return health; }
     public void setHealth(float health) { this.health = Math.max(0, Math.min(maxHealth, health)); }
-    public void takeDamage(float damage) { setHealth(health - damage); }
+    public void takeDamage(float damage) {
+        if (!isInvulnerable && !isRespawnInvulnerable) {
+            health = Math.max(0, health - damage);
+            isInvulnerable = true;
+            invulnerabilityTime = 0;
+            
+            if (health <= 0) {
+                die();
+            }
+        }
+    }
     public int getCoins() { return coins; }
     public void addCoin() { coins++; }
 
@@ -218,23 +208,26 @@ public class Player extends GameEntity implements Collidable {
         super.update(deltaTime);
         collision.update(position);
 
-        // Обновляем анимацию в зависимости от движения
+        updateAnimation();
+        updatePosition(deltaTime);
+        updateTimers(deltaTime);
+    }
+
+    private void updateAnimation() {
         if (velocity.x < 0) {
             animation.setCurrentAnimation(ANIMATION_RUN_LEFT);
             isFacingRight = false;
-            Gdx.app.log("Player", "Setting LEFT animation, velocity: " + velocity.x + ", current animation: " + animation.getCurrentAnimation());
         } else if (velocity.x > 0) {
             animation.setCurrentAnimation(ANIMATION_RUN_RIGHT);
             isFacingRight = true;
-            Gdx.app.log("Player", "Setting RIGHT animation, velocity: " + velocity.x + ", current animation: " + animation.getCurrentAnimation());
         } else {
             animation.setCurrentAnimation(ANIMATION_IDLE);
-            Gdx.app.log("Player", "Setting IDLE animation, velocity: " + velocity.x + ", current animation: " + animation.getCurrentAnimation());
         }
+    }
 
-        // Ограничения по X
+    private void updatePosition(float deltaTime) {
         float minX = 0;
-        float maxX = 1200 - 64;
+        float maxX = LEVEL_WIDTH - PLAYER_SIZE;
 
         if (position.x < minX) {
             position.x = minX;
@@ -245,18 +238,48 @@ public class Player extends GameEntity implements Collidable {
         }
     }
 
+    private void updateTimers(float deltaTime) {
+        if (isInvulnerable) {
+            invulnerabilityTime += deltaTime;
+            if (invulnerabilityTime >= INVULNERABILITY_DURATION) {
+                isInvulnerable = false;
+            }
+        }
+
+        if (isDead) {
+            deathTime += deltaTime;
+            if (deathTime >= DEATH_DURATION) {
+                respawn();
+            }
+        }
+
+        if (isRespawned) {
+            respawnTime += deltaTime;
+            if (respawnTime >= RESPAWN_DURATION) {
+                isRespawned = false;
+            }
+        }
+
+        if (isRespawnInvulnerable) {
+            respawnInvulnerabilityTime += deltaTime;
+            if (respawnInvulnerabilityTime >= RESPAWN_INVULNERABILITY_DURATION) {
+                isRespawnInvulnerable = false;
+            }
+        }
+    }
+
     public void move(float deltaX, float deltaY) {
         float minX = 0;
-        float maxX = 1200 - 64; // 1200 — ширина уровня, 64 — ширина игрока
+        float maxX = LEVEL_WIDTH - PLAYER_SIZE;
 
         float newX = position.x + deltaX;
 
         if (newX < minX) {
             position.x = minX;
-            velocity.x = Math.abs(velocity.x) * 0.5f; // небольшой отскок вправо
+            velocity.x = Math.abs(velocity.x) * 0.5f;
         } else if (newX > maxX) {
             position.x = maxX;
-            velocity.x = -Math.abs(velocity.x) * 0.5f; // небольшой отскок влево
+            velocity.x = -Math.abs(velocity.x) * 0.5f;
         } else {
             position.x = newX;
         }
@@ -285,13 +308,7 @@ public class Player extends GameEntity implements Collidable {
         if (animation != null) {
             TextureRegion currentFrame = animation.getCurrentFrame(Gdx.graphics.getDeltaTime());
             if (currentFrame != null) {
-                float x = position.x;
-                float y = position.y;
-                float width = 64;
-                float height = 64;
-                
-                // Просто отрисовываем текущий кадр без отражения
-                batch.draw(currentFrame, x, y, width, height);
+                batch.draw(currentFrame, position.x, position.y, PLAYER_SIZE, PLAYER_SIZE);
             }
         }
     }
@@ -338,13 +355,39 @@ public class Player extends GameEntity implements Collidable {
     }
 
     public void jump() {
-        if (!isJumping) {
+        if (canJump()) {
             velocity.y = JUMP_VELOCITY;
+            jumpsLeft--;
             isJumping = true;
+            onGround = false;
         }
     }
 
     public void heal(float amount) {
         health = Math.min(maxHealth, health + amount);
+    }
+
+    private void die() {
+        isDead = true;
+        deathTime = 0;
+        animation.setCurrentAnimation(ANIMATION_DEATH);
+    }
+
+    private void respawn() {
+        position.set(respawnPosition);
+        health = respawnHealth;
+        coins = respawnCoins;
+        inventory = new Inventory(spriteManager);
+        if (respawnInventory != null) {
+            for (Item item : respawnInventory.getItems()) {
+                inventory.addItem(item);
+            }
+        }
+        isDead = false;
+        isRespawned = true;
+        isRespawnInvulnerable = true;
+        respawnTime = 0;
+        respawnInvulnerabilityTime = 0;
+        animation.setCurrentAnimation(ANIMATION_IDLE);
     }
 }

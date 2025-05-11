@@ -5,32 +5,51 @@ import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.Gdx;
 
 public class Boss extends GameEntity implements Collidable {
-    private String type;
-    private float health;
-    private float maxHealth;
-    private float damage;
-    private float speed;
+    protected static final float DEFAULT_HEALTH = 500f;
+    protected static final float DEFAULT_DAMAGE = 30f;
+    protected static final float DEFAULT_SPEED = 150f;
+    protected static final float DEFAULT_ATTACK_RANGE = 200f;
+    protected static final float DEFAULT_ATTACK_COOLDOWN = 2f;
+    protected static final int DEFAULT_HITS_TO_DEFEAT = 3;
+    protected static final float DEFAULT_HIT_COOLDOWN = 1.0f;
+    protected static final float DEFAULT_COLLISION_SIZE = 64f;
+
+    protected String type;
+    protected float health;
+    protected float maxHealth;
+    protected float damage;
+    protected float speed;
+    protected float attackRange;
+    protected float attackCooldown;
+    protected float timeSinceLastAttack;
+    protected int hitCount;
+    protected int maxHitsToDefeat;
+    protected float hitCooldown;
+    protected float timeSinceLastHit;
+    protected Player target;
+    protected float moveSpeed;
     protected CollisionComponent collision;
-    private float attackRange = 200f;
-    private float attackCooldown = 2f;
-    private float timeSinceLastAttack = 0f;
-    private int hitCount = 0;
-    private int maxHitsToDefeat = 3;
-    private float hitCooldown = 1.0f;
-    private float timeSinceLastHit = 0f;
-    private Player target;
-    protected float moveSpeed = 150f;
 
     public Boss(String name, float x, float y, SpriteManager spriteManager) {
         super(name, spriteManager);
+        initializeBoss(x, y);
+    }
+
+    protected void initializeBoss(float x, float y) {
         this.position = new Vector2(x, y);
-        this.health = 500;
-        this.maxHealth = 500;
-        this.damage = 30;
-        this.speed = 150;
-        this.collision = new CollisionComponent(64, 64);
+        this.health = DEFAULT_HEALTH;
+        this.maxHealth = DEFAULT_HEALTH;
+        this.damage = DEFAULT_DAMAGE;
+        this.speed = DEFAULT_SPEED;
+        this.attackRange = DEFAULT_ATTACK_RANGE;
+        this.attackCooldown = DEFAULT_ATTACK_COOLDOWN;
+        this.maxHitsToDefeat = DEFAULT_HITS_TO_DEFEAT;
+        this.hitCooldown = DEFAULT_HIT_COOLDOWN;
+        this.moveSpeed = DEFAULT_SPEED;
+        this.collision = new CollisionComponent(DEFAULT_COLLISION_SIZE, DEFAULT_COLLISION_SIZE);
         this.collision.update(position);
         this.type = name;
     }
@@ -55,7 +74,6 @@ public class Boss extends GameEntity implements Collidable {
 
     protected void die() {
         setActive(false);
-        System.out.println(getType() + " побежден!");
     }
 
     public boolean tryRegisterHit() {
@@ -92,17 +110,21 @@ public class Boss extends GameEntity implements Collidable {
         timeSinceLastAttack += deltaTime;
 
         if (target != null && isActive()) {
-            // Движение к цели
-            Vector2 direction = new Vector2(target.getPosition()).sub(position).nor();
-            this.position.add(direction.scl(moveSpeed * deltaTime));
+            updateMovement(deltaTime);
+            updateAttack();
+        }
+    }
 
-            // Проверка атаки
-            if (collision.collidesWith(target.getCollisionComponent()) &&
-                    timeSinceLastAttack >= attackCooldown) {
+    protected void updateMovement(float deltaTime) {
+        Vector2 direction = new Vector2(target.getPosition()).sub(position).nor();
+        this.position.add(direction.scl(moveSpeed * deltaTime));
+    }
 
-                target.takeDamage(15f);
-                timeSinceLastAttack = 0f;
-            }
+    protected void updateAttack() {
+        if (collision.collidesWith(target.getCollisionComponent()) &&
+                timeSinceLastAttack >= attackCooldown) {
+            target.takeDamage(damage);
+            timeSinceLastAttack = 0f;
         }
     }
 

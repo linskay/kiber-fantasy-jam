@@ -9,6 +9,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Array;
 import com.cyberkingdom.items.Item;
 import com.cyberkingdom.rendering.SpriteManager;
 
@@ -57,6 +58,13 @@ public class Player extends GameEntity implements Collidable {
     private float respawnInvulnerabilityTime = 0;
     private float respawnInvulnerabilityDuration = 2.0f;
     private Rectangle bounds;
+    private static final int ANIMATION_IDLE = 0;
+    private static final int ANIMATION_RUN_LEFT = 1;
+    private static final int ANIMATION_RUN_RIGHT = 2;
+    private static final float MOVE_SPEED = 300f;
+    private static final float JUMP_VELOCITY = 500f;
+    private static final float GRAVITY = -1000f;
+    private static final int ANIMATION_DEATH = 3;
 
     public Player(Vector2 position, SpriteManager spriteManager) {
         super("Player", spriteManager);
@@ -105,6 +113,56 @@ public class Player extends GameEntity implements Collidable {
         this.respawnInvulnerabilityTime = 0;
         this.respawnInvulnerabilityDuration = 2.0f;
         this.bounds = new Rectangle(position.x, position.y, 32, 32);
+        
+        // Инициализируем анимацию
+        this.animation = new AnimationComponent();
+        
+        // Загружаем текстуры для анимации
+        loadAnimations();
+    }
+
+    private void loadAnimations() {
+        try {
+            // Загружаем текстуру покоя
+            Texture idleTexture = new Texture(Gdx.files.internal("assets/entities/player.png"));
+            Array<TextureRegion> idleFrames = new Array<>();
+            idleFrames.add(new TextureRegion(idleTexture));
+            animation.addAnimation(idleFrames);
+            Gdx.app.log("Player", "Idle animation loaded");
+
+            // Загружаем анимации из SpriteManager
+            TextureRegion[] leftFrames = spriteManager.getFrames("Player_Left");
+            TextureRegion[] rightFrames = spriteManager.getFrames("Player_Right");
+            TextureRegion[] deathFrames = spriteManager.getFrames("Player_Death");
+
+            if (leftFrames != null && rightFrames != null && deathFrames != null) {
+                // Добавляем анимации в правильном порядке
+                Array<TextureRegion> leftArray = new Array<>(leftFrames);
+                Array<TextureRegion> rightArray = new Array<>(rightFrames);
+                Array<TextureRegion> deathArray = new Array<>(deathFrames);
+
+                animation.addAnimation(leftArray);  // RUN_LEFT
+                Gdx.app.log("Player", "Left animation added with " + leftArray.size + " frames");
+                
+                animation.addAnimation(rightArray); // RUN_RIGHT
+                Gdx.app.log("Player", "Right animation added with " + rightArray.size + " frames");
+                
+                animation.addAnimation(deathArray); // DEATH
+                Gdx.app.log("Player", "Death animation added with " + deathArray.size + " frames");
+
+                // Устанавливаем начальную анимацию (покой)
+                animation.setCurrentAnimation(ANIMATION_IDLE);
+                
+                Gdx.app.log("Player", "All animations loaded successfully");
+            } else {
+                Gdx.app.error("Player", "Failed to load animation frames");
+                if (leftFrames == null) Gdx.app.error("Player", "Left frames are null");
+                if (rightFrames == null) Gdx.app.error("Player", "Right frames are null");
+                if (deathFrames == null) Gdx.app.error("Player", "Death frames are null");
+            }
+        } catch (Exception e) {
+            Gdx.app.error("Player", "Error loading animations", e);
+        }
     }
 
     @Override
@@ -155,19 +213,35 @@ public class Player extends GameEntity implements Collidable {
     public int getCoins() { return coins; }
     public void addCoin() { coins++; }
 
+    @Override
     public void update(float deltaTime) {
+        super.update(deltaTime);
         collision.update(position);
+
+        // Обновляем анимацию в зависимости от движения
+        if (velocity.x < 0) {
+            animation.setCurrentAnimation(ANIMATION_RUN_LEFT);
+            isFacingRight = false;
+            Gdx.app.log("Player", "Setting LEFT animation, velocity: " + velocity.x + ", current animation: " + animation.getCurrentAnimation());
+        } else if (velocity.x > 0) {
+            animation.setCurrentAnimation(ANIMATION_RUN_RIGHT);
+            isFacingRight = true;
+            Gdx.app.log("Player", "Setting RIGHT animation, velocity: " + velocity.x + ", current animation: " + animation.getCurrentAnimation());
+        } else {
+            animation.setCurrentAnimation(ANIMATION_IDLE);
+            Gdx.app.log("Player", "Setting IDLE animation, velocity: " + velocity.x + ", current animation: " + animation.getCurrentAnimation());
+        }
 
         // Ограничения по X
         float minX = 0;
-        float maxX = 1200 - 64; // 1200 — ширина уровня, 64 — ширина игрока
+        float maxX = 1200 - 64;
 
         if (position.x < minX) {
             position.x = minX;
-            if (velocity.x < 0) velocity.x = 0; // полностью останавливаем движение влево
+            velocity.x = 0;
         } else if (position.x > maxX) {
             position.x = maxX;
-            if (velocity.x > 0) velocity.x = 0; // полностью останавливаем движение вправо
+            velocity.x = 0;
         }
     }
 
@@ -206,22 +280,19 @@ public class Player extends GameEntity implements Collidable {
         }
     }
 
+    @Override
     public void render(SpriteBatch batch) {
-        float x = getPosition().x;
-        float y = getPosition().y;
-        float width = 64;
-        float height = 64;
-
-        if (getAnimation() != null) {
-            TextureRegion currentFrame = getAnimation().getCurrentFrame(Gdx.graphics.getDeltaTime());
+        if (animation != null) {
+            TextureRegion currentFrame = animation.getCurrentFrame(Gdx.graphics.getDeltaTime());
             if (currentFrame != null) {
+                float x = position.x;
+                float y = position.y;
+                float width = 64;
+                float height = 64;
+                
+                // Просто отрисовываем текущий кадр без отражения
                 batch.draw(currentFrame, x, y, width, height);
-                return;
             }
-        }
-
-        if (getTexture() != null) {
-            batch.draw(getTexture(), x, y, width, height);
         }
     }
 
@@ -252,5 +323,28 @@ public class Player extends GameEntity implements Collidable {
 
     public void setInventory(Inventory inventory) {
         this.inventory = inventory;
+    }
+
+    public void moveLeft() {
+        velocity.x = -MOVE_SPEED;
+    }
+
+    public void moveRight() {
+        velocity.x = MOVE_SPEED;
+    }
+
+    public void stop() {
+        velocity.x = 0;
+    }
+
+    public void jump() {
+        if (!isJumping) {
+            velocity.y = JUMP_VELOCITY;
+            isJumping = true;
+        }
+    }
+
+    public void heal(float amount) {
+        health = Math.min(maxHealth, health + amount);
     }
 }

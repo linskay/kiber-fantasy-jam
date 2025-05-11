@@ -1,8 +1,5 @@
 package com.cyberkingdom.entities;
 
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
-import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.rendering.SpriteManager;
 
 public class CatMiner extends Boss {

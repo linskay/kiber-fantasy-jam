@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.items.Item;
@@ -47,30 +48,20 @@ public abstract class GameEntity {
     }
 
     protected void initializeTexture(SpriteManager spriteManager) {
-        if (spriteManager == null) {
-            Gdx.app.error("GameEntity", "SpriteManager is null for entity: " + name);
-            return;
-        }
-
-        TextureRegion[] frames = spriteManager.getFrames(name);
-        if (frames != null && frames.length > 0) {
-            Gdx.app.log("GameEntity", "Found " + frames.length + " frames for entity: " + name);
-            for (TextureRegion frame : frames) {
-                if (frame != null) {
-                    animation.addFrame(frame);
-                    Gdx.app.log("GameEntity", "Added frame with size: " + frame.getRegionWidth() + "x" + frame.getRegionHeight());
-                } else {
-                    Gdx.app.error("GameEntity", "Null frame found for entity: " + name);
+        try {
+            if (spriteManager != null) {
+                texture = spriteManager.getTexture(name);
+                if (texture != null) {
+                    Array<TextureRegion> frames = new Array<>();
+                    frames.add(new TextureRegion(texture));
+                    animation.addAnimation(frames);
+                    return;
                 }
             }
-            animation.setFrameDuration(0.1f);
-            texture = frames[0].getTexture();
-            Gdx.app.log("GameEntity", "Set texture from first frame for: " + name + 
-                " with size: " + texture.getWidth() + "x" + texture.getHeight());
-        } else {
-            Gdx.app.error("GameEntity", "No frames found for entity: " + name);
-            createFallbackTexture();
+        } catch (Exception e) {
+            Gdx.app.error("GameEntity", "Error loading texture for " + name, e);
         }
+        createFallbackTexture();
     }
 
     private void createFallbackTexture() {
@@ -116,7 +107,9 @@ public abstract class GameEntity {
             pixmap.drawRectangle(width/8, height/8, width*3/4, height*3/4);
         }
         texture = new Texture(pixmap);
-        animation.addFrame(new TextureRegion(texture));
+        Array<TextureRegion> frames = new Array<>();
+        frames.add(new TextureRegion(texture));
+        animation.addAnimation(frames);
         pixmap.dispose();
         Gdx.app.log("GameEntity", "Created fallback texture for: " + name + 
             " with size: " + texture.getWidth() + "x" + texture.getHeight());

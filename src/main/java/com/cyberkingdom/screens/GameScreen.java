@@ -14,25 +14,15 @@ import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.rendering.SpriteRenderer;
 import com.cyberkingdom.ui.UIManager;
 import com.cyberkingdom.world.LevelLoader;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.cyberkingdom.boss.BossFightLogic;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.audio.Music;
-import com.cyberkingdom.audio.MusicManager;
 import com.cyberkingdom.items.ItemPickupSystem;
 import com.cyberkingdom.items.Item;
 import com.cyberkingdom.boss.BossSpawnManager;
 import com.cyberkingdom.rendering.SpriteManager;
-import com.badlogic.gdx.InputProcessor;
 import com.cyberkingdom.input.InputHandler;
-import com.badlogic.gdx.Input;
 import com.cyberkingdom.gameengine.GameEngine;
 import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.math.Vector2;
-import com.cyberkingdom.items.InventoryWindow;
-import com.cyberkingdom.items.Inventory;
 
 public class GameScreen implements Screen {
     private GameEngine engine;

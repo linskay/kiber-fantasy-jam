@@ -1,72 +1,48 @@
 package com.cyberkingdom.entities;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import java.util.ArrayList;
-import java.util.List;
+import com.badlogic.gdx.utils.Array;
 
 public class AnimationComponent {
-    private List<TextureRegion> frames;
-    private float frameDuration;
-    private int currentFrameIndex;
+    private Array<Animation<TextureRegion>> animations;
     private float stateTime;
+    private int currentAnimationIndex;
+    private static final float FRAME_DURATION = 0.1f;
 
     public AnimationComponent() {
-        this.frames = new ArrayList<>();
-        this.frameDuration = 0.1f; // Убедимся, что значение не ноль
-        this.currentFrameIndex = 0;
-        this.stateTime = 0f;
+        this.animations = new Array<>();
+        this.stateTime = 0;
+        this.currentAnimationIndex = 0;
     }
 
-    public void addFrame(TextureRegion frame) {
-        if (frame != null) {
-            frames.add(frame);
+    public void addAnimation(Array<TextureRegion> frames) {
+        Animation<TextureRegion> animation = new Animation<>(FRAME_DURATION, frames);
+        animations.add(animation);
+    }
+
+    public void setCurrentAnimation(int index) {
+        if (index >= 0 && index < animations.size) {
+            currentAnimationIndex = index;
         }
+    }
+
+    public int getCurrentAnimation() {
+        return currentAnimationIndex;
     }
 
     public TextureRegion getCurrentFrame(float deltaTime) {
-        if (frames.isEmpty()) {
-            return null; // Возвращаем null, если нет кадров
-        }
+        if (animations.size == 0) return null;
         stateTime += deltaTime;
-        if (stateTime > frameDuration && !frames.isEmpty()) {
-            currentFrameIndex = (currentFrameIndex + 1) % frames.size();
-            stateTime = 0f;
-        }
-        return frames.get(currentFrameIndex);
-    }
-
-    public List<TextureRegion> getFrames() {
-        return frames;
-    }
-
-    public void setFrameDuration(float duration) {
-        this.frameDuration = Math.max(0.01f, duration); // Минимальное значение для избежания деления на ноль
+        return animations.get(currentAnimationIndex).getKeyFrame(stateTime, true);
     }
 
     public void update(float deltaTime) {
-        if (!frames.isEmpty()) {
-            stateTime += deltaTime;
-            if (stateTime > frameDuration) {
-                currentFrameIndex = (currentFrameIndex + 1) % frames.size();
-                stateTime = 0f;
-            }
-        }
-    }
-
-    public void clearFrames() {
-        if (frames != null) {
-            frames.clear();
-            currentFrameIndex = 0;
-            stateTime = 0f;
-        }
+        stateTime += deltaTime;
     }
 
     public void dispose() {
-        if (frames != null) {
-            frames.clear();
-            frames = null;
-        }
-        stateTime = 0f;
-        currentFrameIndex = 0;
+        animations.clear();
     }
 }

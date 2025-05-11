@@ -12,6 +12,8 @@ import com.cyberkingdom.entities.Collidable;
 import com.cyberkingdom.entities.GameEntity;
 import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.utils.Array;
+import com.cyberkingdom.entities.AnimationComponent;
 
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +22,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
 public class Item extends GameEntity implements Collidable {
-    private String itemType;
+    private ItemType itemType;
     public String name;
     public String description;
     public String effect;
@@ -31,6 +33,11 @@ public class Item extends GameEntity implements Collidable {
     private int value;
     private static final Random random = new Random();
     private SpriteManager spriteManager;
+    private boolean isCollected;
+    private Rectangle bounds;
+    private static int itemCounter = 0;
+    private int itemId;
+    private AnimationComponent animation;
 
     public static final String ITEM_COIN = "COIN";
     public static final String ITEM_CRYPTO_COIN = "CRYPTO_COIN";
@@ -72,18 +79,24 @@ public class Item extends GameEntity implements Collidable {
         new ItemData(ITEM_WIFI_KEY, "WiFi-Ключ", "Нужен для финального босса", "Пароль: 12345678")
     );
 
-    public Item(String itemType, Vector2 position, int quantity, SpriteManager spriteManager) {
-        super(itemType, spriteManager);
-        this.itemType = itemType;
+    public Item(ItemType type, Vector2 position, int quantity, SpriteManager spriteManager) {
+        super(type.name(), spriteManager);
+        this.itemType = type;
         this.position = position;
         this.quantity = quantity;
         this.isActive = true;
         this.collision = new CollisionComponent(32, 32);
         this.collision.update(position);
+        this.isCollected = false;
+        this.bounds = new Rectangle(position.x, position.y, 32, 32);
+        this.itemId = ++itemCounter;
+        this.animation = new AnimationComponent();
+        setTextureFromSpriteManager(spriteManager);
     }
 
     @Override
     public void update(float deltaTime) {
+        super.update(deltaTime);
         if (isActive && collision != null) {
             collision.update(position);
         }
@@ -103,16 +116,66 @@ public class Item extends GameEntity implements Collidable {
         this.name = name;
     }
 
-    public String getItemType() { return itemType; }
-    public String getName() { return name; }
-    public String getDescription() { return description; }
-    public String getEffect() { return effect; }
-    public int getQuantity() { return quantity; }
-    public void setQuantity(int quantity) { this.quantity = quantity; }
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { this.isActive = active; }
-    public int getValue() { return value; }
-    public void setValue(int value) { this.value = value; }
+    public ItemType getItemType() {
+        return itemType;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getEffect() {
+        return effect;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        this.isActive = active;
+    }
+
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+    public boolean isCollected() {
+        return isCollected;
+    }
+
+    public void setCollected(boolean collected) {
+        isCollected = collected;
+    }
+
+    public Rectangle getBounds() {
+        bounds.setPosition(position.x, position.y);
+        return bounds;
+    }
+
+    public int getItemId() {
+        return itemId;
+    }
+
+    public static void resetItemCounter() {
+        itemCounter = 0;
+    }
 
     @Override
     public void dispose() {
@@ -121,28 +184,39 @@ public class Item extends GameEntity implements Collidable {
         if (collision != null) {
             collision = null;
         }
+        if (texture != null) {
+            texture.dispose();
+            texture = null;
+        }
+        if (animation != null) {
+            animation.dispose();
+            animation = null;
+        }
     }
 
     public Texture getTexture() {
         return texture;
     }
 
+    @Override
     public void render(SpriteBatch batch) {
-        float x = getPosition().x;
-        float y = getPosition().y;
-        float width = 32;
-        float height = 32;
+        if (!isCollected) {
+            float x = position.x;
+            float y = position.y;
+            float width = 32;
+            float height = 32;
 
-        if (getAnimation() != null) {
-            TextureRegion currentFrame = getAnimation().getCurrentFrame(Gdx.graphics.getDeltaTime());
-            if (currentFrame != null) {
-                batch.draw(currentFrame, x, y, width, height);
-                return;
+            if (getAnimation() != null) {
+                TextureRegion currentFrame = getAnimation().getCurrentFrame(Gdx.graphics.getDeltaTime());
+                if (currentFrame != null) {
+                    batch.draw(currentFrame, x, y, width, height);
+                    return;
+                }
             }
-        }
 
-        if (getTexture() != null) {
-            batch.draw(getTexture(), x, y, width, height);
+            if (getTexture() != null) {
+                batch.draw(getTexture(), x, y, width, height);
+            }
         }
     }
 
@@ -167,25 +241,36 @@ public class Item extends GameEntity implements Collidable {
     }
 
     public void setTextureFromSpriteManager(SpriteManager spriteManager) {
-        if (spriteManager == null) {
-            Gdx.app.error("Item", "SpriteManager is null for item: " + itemType);
-            return;
-        }
-
-        TextureRegion[] frames = spriteManager.getFrames(itemType);
-        if (frames != null && frames.length > 0) {
-            texture = frames[0].getTexture();
-            if (animation != null) {
-                animation.clearFrames();
-                for (TextureRegion frame : frames) {
-                    animation.addFrame(frame);
+        try {
+            if (spriteManager != null) {
+                texture = spriteManager.getTexture(itemType.name());
+                if (texture != null) {
+                    Array<TextureRegion> frames = new Array<>();
+                    frames.add(new TextureRegion(texture));
+                    animation.addAnimation(frames);
+                    return;
                 }
-                animation.setFrameDuration(0.1f);
             }
-            Gdx.app.log("Item", "Set texture for item: " + itemType + " with size: " + 
-                texture.getWidth() + "x" + texture.getHeight());
-        } else {
-            Gdx.app.error("Item", "No frames found for item: " + itemType);
+        } catch (Exception e) {
+            Gdx.app.error("Item", "Error loading texture for " + itemType.name(), e);
+        }
+    }
+
+    public void setupAnimations() {
+        if (spriteManager != null) {
+            TextureRegion[] frames = spriteManager.getFrames(itemType.name());
+            if (frames != null && frames.length > 0) {
+                texture = frames[0].getTexture();
+                Array<TextureRegion> animationFrames = new Array<>();
+                for (TextureRegion frame : frames) {
+                    animationFrames.add(frame);
+                }
+                animation.addAnimation(animationFrames);
+                Gdx.app.log("Item", "Set texture for item: " + itemType.name() + " with size: " + 
+                    texture.getWidth() + "x" + texture.getHeight());
+            } else {
+                Gdx.app.error("Item", "No frames found for item: " + itemType.name());
+            }
         }
     }
 }

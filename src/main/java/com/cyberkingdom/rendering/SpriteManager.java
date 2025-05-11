@@ -5,21 +5,23 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import java.util.HashMap;
-import java.util.Map;
+import com.badlogic.gdx.utils.ObjectMap;
+import com.badlogic.gdx.utils.Array;
 
 public class SpriteManager {
-    private final Map<String, Texture> textures = new HashMap<>();
-    private final Map<String, TextureRegion[]> spriteRegions = new HashMap<>();
+    private ObjectMap<String, Texture> textures;
+    private ObjectMap<String, TextureRegion[]> frames;
 
     public SpriteManager() {
+        this.textures = new ObjectMap<>();
+        this.frames = new ObjectMap<>();
         loadTextures();
         setupSpriteRegions();
     }
 
     public void loadTextures() {
-        // Загрузка текстур игрока
-        loadTexture("Player", "assets/entities/player.png");
+        // Загрузка анимаций игрока
+        loadPlayerAnimations();
         
         // Загрузка текстур боссов
         loadTexture("WITCH_VPN", "assets/entities/witch_vpn.png");
@@ -38,21 +40,91 @@ public class SpriteManager {
         loadTexture("Platform", "assets/platform.png");
     }
 
+    private void loadPlayerAnimations() {
+        try {
+            // Загрузка анимации движения влево
+            Array<TextureRegion> leftFrames = new Array<>();
+            boolean leftFramesLoaded = true;
+            for (int i = 1; i <= 4; i++) {
+                String path = "assets/entities/oleg_run/left" + i + ".png";
+                if (Gdx.files.internal(path).exists()) {
+                    Gdx.app.log("SpriteManager", "Loading left animation frame: " + path);
+                    Texture texture = new Texture(Gdx.files.internal(path));
+                    TextureRegion region = new TextureRegion(texture);
+                    leftFrames.add(region);
+                    textures.put("Player_Left_" + i, texture);
+                    Gdx.app.log("SpriteManager", "Successfully loaded left frame " + i);
+                } else {
+                    Gdx.app.error("SpriteManager", "Left animation frame not found: " + path);
+                    leftFramesLoaded = false;
+                }
+            }
+            if (leftFramesLoaded && !leftFrames.isEmpty()) {
+                frames.put("Player_Left", leftFrames.toArray(TextureRegion.class));
+                Gdx.app.log("SpriteManager", "Left animation loaded with " + leftFrames.size + " frames");
+            } else {
+                Gdx.app.error("SpriteManager", "Failed to load left animation frames!");
+            }
+
+            // Загрузка анимации движения вправо
+            Array<TextureRegion> rightFrames = new Array<>();
+            boolean rightFramesLoaded = true;
+            for (int i = 1; i <= 4; i++) {
+                String path = "assets/entities/oleg_run/right" + i + ".png";
+                if (Gdx.files.internal(path).exists()) {
+                    Gdx.app.log("SpriteManager", "Loading right animation frame: " + path);
+                    Texture texture = new Texture(Gdx.files.internal(path));
+                    TextureRegion region = new TextureRegion(texture);
+                    rightFrames.add(region);
+                    textures.put("Player_Right_" + i, texture);
+                    Gdx.app.log("SpriteManager", "Successfully loaded right frame " + i);
+                } else {
+                    Gdx.app.error("SpriteManager", "Right animation frame not found: " + path);
+                    rightFramesLoaded = false;
+                }
+            }
+            if (rightFramesLoaded && !rightFrames.isEmpty()) {
+                frames.put("Player_Right", rightFrames.toArray(TextureRegion.class));
+                Gdx.app.log("SpriteManager", "Right animation loaded with " + rightFrames.size + " frames");
+            } else {
+                Gdx.app.error("SpriteManager", "Failed to load right animation frames!");
+            }
+
+            // Загрузка анимации смерти
+            Array<TextureRegion> deathFrames = new Array<>();
+            boolean deathFramesLoaded = true;
+            for (int i = 1; i <= 4; i++) {
+                String path = "assets/entities/oleg_run/death" + i + ".png";
+                if (Gdx.files.internal(path).exists()) {
+                    Gdx.app.log("SpriteManager", "Loading death animation frame: " + path);
+                    Texture texture = new Texture(Gdx.files.internal(path));
+                    TextureRegion region = new TextureRegion(texture);
+                    deathFrames.add(region);
+                    textures.put("Player_Death_" + i, texture);
+                    Gdx.app.log("SpriteManager", "Successfully loaded death frame " + i);
+                } else {
+                    Gdx.app.error("SpriteManager", "Death animation frame not found: " + path);
+                    deathFramesLoaded = false;
+                }
+            }
+            if (deathFramesLoaded && !deathFrames.isEmpty()) {
+                frames.put("Player_Death", deathFrames.toArray(TextureRegion.class));
+                Gdx.app.log("SpriteManager", "Death animation loaded with " + deathFrames.size + " frames");
+            } else {
+                Gdx.app.error("SpriteManager", "Failed to load death animation frames!");
+            }
+        } catch (Exception e) {
+            Gdx.app.error("SpriteManager", "Error loading player animations", e);
+        }
+    }
+
     private void loadTexture(String name, String path) {
         try {
-            if (!Gdx.files.internal(path).exists()) {
-                Gdx.app.error("SpriteManager", "Texture file not found: " + path);
-                throw new RuntimeException("Texture file not found: " + path);
-            }
-            
             Texture texture = new Texture(Gdx.files.internal(path));
-            texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             textures.put(name, texture);
-            Gdx.app.log("SpriteManager", "Successfully loaded texture: " + path + " for " + name + 
-                " (width=" + texture.getWidth() + ", height=" + texture.getHeight() + ")");
+            Gdx.app.log("SpriteManager", "Loaded texture: " + name);
         } catch (Exception e) {
-            Gdx.app.error("SpriteManager", "Error loading texture: " + path, e);
-            throw new RuntimeException("Failed to load texture: " + path, e);
+            Gdx.app.error("SpriteManager", "Failed to load texture: " + name, e);
         }
     }
 
@@ -60,25 +132,16 @@ public class SpriteManager {
         // Настройка регионов для платформы
         Texture platformTexture = textures.get("Platform");
         if (platformTexture != null) {
-            spriteRegions.put("Platform", new TextureRegion[] { new TextureRegion(platformTexture) });
+            frames.put("Platform", new TextureRegion[] { new TextureRegion(platformTexture) });
             Gdx.app.log("SpriteManager", "Platform texture loaded successfully");
         } else {
             Gdx.app.error("SpriteManager", "Platform texture is null");
         }
 
-        // Настройка регионов для игрока
-        Texture playerTexture = textures.get("Player");
-        if (playerTexture != null) {
-            spriteRegions.put("Player", new TextureRegion[] { new TextureRegion(playerTexture) });
-            Gdx.app.log("SpriteManager", "Player texture loaded successfully");
-        } else {
-            Gdx.app.error("SpriteManager", "Player texture is null");
-        }
-
         // Настройка регионов для монет
         Texture coinTexture = textures.get("COIN");
         if (coinTexture != null) {
-            spriteRegions.put("COIN", new TextureRegion[] { new TextureRegion(coinTexture) });
+            frames.put("COIN", new TextureRegion[] { new TextureRegion(coinTexture) });
             Gdx.app.log("SpriteManager", "Coin texture loaded successfully");
         } else {
             Gdx.app.error("SpriteManager", "Coin texture is null");
@@ -87,7 +150,7 @@ public class SpriteManager {
         // Настройка регионов для боссов
         Texture witchTexture = textures.get("WITCH_VPN");
         if (witchTexture != null) {
-            spriteRegions.put("WITCH_VPN", new TextureRegion[] { new TextureRegion(witchTexture) });
+            frames.put("WITCH_VPN", new TextureRegion[] { new TextureRegion(witchTexture) });
             Gdx.app.log("SpriteManager", "Witch VPN texture loaded successfully");
         } else {
             Gdx.app.error("SpriteManager", "Witch VPN texture is null");
@@ -95,7 +158,7 @@ public class SpriteManager {
 
         Texture catTexture = textures.get("CAT_MINER");
         if (catTexture != null) {
-            spriteRegions.put("CAT_MINER", new TextureRegion[] { new TextureRegion(catTexture) });
+            frames.put("CAT_MINER", new TextureRegion[] { new TextureRegion(catTexture) });
             Gdx.app.log("SpriteManager", "Cat Miner texture loaded successfully");
         } else {
             Gdx.app.error("SpriteManager", "Cat Miner texture is null");
@@ -104,49 +167,47 @@ public class SpriteManager {
         // Настройка регионов для предметов
         Texture usbTexture = textures.get("USB_SKATERT");
         if (usbTexture != null) {
-            spriteRegions.put("USB_SKATERT", new TextureRegion[] { new TextureRegion(usbTexture) });
+            frames.put("USB_SKATERT", new TextureRegion[] { new TextureRegion(usbTexture) });
             Gdx.app.log("SpriteManager", "USB Skatert texture loaded successfully");
         }
 
         Texture shovelTexture = textures.get("CRYPTO_SHOVEL");
         if (shovelTexture != null) {
-            spriteRegions.put("CRYPTO_SHOVEL", new TextureRegion[] { new TextureRegion(shovelTexture) });
+            frames.put("CRYPTO_SHOVEL", new TextureRegion[] { new TextureRegion(shovelTexture) });
             Gdx.app.log("SpriteManager", "Crypto Shovel texture loaded successfully");
         }
 
         Texture rtxTexture = textures.get("RTX_4090");
         if (rtxTexture != null) {
-            spriteRegions.put("RTX_4090", new TextureRegion[] { new TextureRegion(rtxTexture) });
+            frames.put("RTX_4090", new TextureRegion[] { new TextureRegion(rtxTexture) });
             Gdx.app.log("SpriteManager", "RTX 4090 texture loaded successfully");
         }
 
         Texture tushonkaTexture = textures.get("TUSHENKA");
         if (tushonkaTexture != null) {
-            spriteRegions.put("TUSHENKA", new TextureRegion[] { new TextureRegion(tushonkaTexture) });
+            frames.put("TUSHENKA", new TextureRegion[] { new TextureRegion(tushonkaTexture) });
             Gdx.app.log("SpriteManager", "Tushenka texture loaded successfully");
         }
 
         Texture knigaTexture = textures.get("KNIGA");
         if (knigaTexture != null) {
-            spriteRegions.put("KNIGA", new TextureRegion[] { new TextureRegion(knigaTexture) });
+            frames.put("KNIGA", new TextureRegion[] { new TextureRegion(knigaTexture) });
             Gdx.app.log("SpriteManager", "Kniga texture loaded successfully");
         }
 
         Texture keyTexture = textures.get("WIFI_KEY");
         if (keyTexture != null) {
-            spriteRegions.put("WIFI_KEY", new TextureRegion[] { new TextureRegion(keyTexture) });
+            frames.put("WIFI_KEY", new TextureRegion[] { new TextureRegion(keyTexture) });
             Gdx.app.log("SpriteManager", "Wifi Key texture loaded successfully");
         }
     }
 
+    public Texture getTexture(String name) {
+        return textures.get(name);
+    }
+
     public TextureRegion[] getFrames(String name) {
-        TextureRegion[] regions = spriteRegions.get(name);
-        if (regions != null) {
-            Gdx.app.log("SpriteManager", "Found " + regions.length + " frames for: " + name);
-            return regions;
-        }
-        Gdx.app.error("SpriteManager", "No frames found for: " + name);
-        return null;
+        return frames.get(name);
     }
 
     private Texture createPlaceholderTexture() {
@@ -160,11 +221,9 @@ public class SpriteManager {
 
     public void dispose() {
         for (Texture texture : textures.values()) {
-            if (texture != null) {
-                texture.dispose();
-            }
+            texture.dispose();
         }
         textures.clear();
-        spriteRegions.clear();
+        frames.clear();
     }
 }

@@ -20,14 +20,11 @@ import com.cyberkingdom.entities.EntitySystem;
 import com.cyberkingdom.entities.Player;
 import com.cyberkingdom.gameengine.GameEngine;
 import com.cyberkingdom.input.InputHandler;
-import com.cyberkingdom.items.Inventory;
 import com.cyberkingdom.items.InventoryWindow;
 import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.rendering.SpriteRenderer;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.graphics.Cursor;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 
 public class UIManager {
     private InventoryUI inventoryUI;

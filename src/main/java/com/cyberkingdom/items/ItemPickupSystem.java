@@ -44,7 +44,7 @@ public class ItemPickupSystem {
                 if (playerCollision.collidesWith(itemCollision)) {
                     Gdx.app.log("ItemPickupSystem", "Collision detected with item: " + item.getItemType());
                     
-                    if (item.getItemType().equals("COIN")) {
+                    if (item.getItemType() == ItemType.COIN) {
                         player.collectCoin();
                         itemsToRemove.add(item);
                         if (itemPickupSound != null) {
@@ -70,16 +70,21 @@ public class ItemPickupSystem {
             }
         }
 
-        // Удаляем подобранные предметы
+        // Удаляем собранные предметы
         for (Item item : itemsToRemove) {
             entitySystem.removeEntity(item);
-            item.dispose();
+            if (item.getItemType() == ItemType.COIN) {
+                // Если это монета, удаляем платформу из списка платформ с монетами
+                Rectangle platform = new Rectangle(item.getPosition().x, item.getPosition().y - 10, 32, 32);
+                levelLoader.removePlatformFromCoinsList(platform);
+            }
         }
     }
 
     public void dispose() {
         if (itemPickupSound != null) {
             itemPickupSound.dispose();
+            itemPickupSound = null;
         }
     }
 }

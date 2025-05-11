@@ -1,13 +1,13 @@
 package com.cyberkingdom.world;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.entities.*;
 import com.cyberkingdom.items.Item;
+import com.cyberkingdom.items.ItemType;
 import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.rendering.SpriteManager;
 
@@ -305,43 +305,22 @@ public class LevelLoader {
         return platforms;
     }
 
-    private Texture createCoinTexture() {
-        Pixmap pm = null;
-        try {
-            pm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
-            
-            pm.setColor(0, 0, 0, 0);
-            pm.fill();
-            
-            pm.setColor(1f, 0.8f, 0, 1f);
-            pm.fillCircle(16, 16, 14);
-            
-            pm.setColor(1f, 1f, 0.8f, 0.8f);
-            pm.fillCircle(12, 12, 4);
-            
-            pm.setColor(0.8f, 0.6f, 0, 1f);
-            pm.drawCircle(16, 16, 14);
-            
-            return new Texture(pm);
-        } catch (Exception e) {
-            Gdx.app.error("LevelLoader", "Failed to create coin texture", e);
-            throw new RuntimeException("Failed to create coin texture", e);
-        } finally {
-            if (pm != null) {
-                pm.dispose();
-            }
-        }
-    }
-
     private void spawnUniqueItemsOnMap(EntitySystem entitySystem, Player player) {
         List<Rectangle> usedPlatforms = new ArrayList<>();
         Random rand = new Random();
-        for (String itemType : UNIQUE_ITEMS) {
+        for (ItemType itemType : new ItemType[] {
+            ItemType.USB_SKATERT,
+            ItemType.CRYPTO_SHOVEL,
+            ItemType.RTX_4090,
+            ItemType.TUSHENKA,
+            ItemType.KNIGA,
+            ItemType.WIFI_KEY
+        }) {
             // Проверяем, есть ли предмет уже в инвентаре
             boolean alreadyInInventory = false;
             if (player != null) {
                 alreadyInInventory = player.getInventory().getItems().stream()
-                    .anyMatch(item -> item.getItemType().equals(itemType));
+                    .anyMatch(item -> item.getItemType() == itemType);
             }
             if (alreadyInInventory) continue;
             Rectangle platform;
@@ -352,7 +331,7 @@ public class LevelLoader {
             float x = platform.x + rand.nextFloat() * platform.width;
             float y = platform.y + platform.height + 10;
             Vector2 spawnPos = new Vector2(x, y);
-            Item item = entityFactory.createItem(itemType, spawnPos, 1);
+            Item item = entityFactory.createItem(itemType.name(), spawnPos, 1);
             if (item != null) {
                 Gdx.app.log("LevelLoader", "Spawning unique item " + itemType + " at: (" + x + ", " + y + ")");
                 entitySystem.addEntity(item);

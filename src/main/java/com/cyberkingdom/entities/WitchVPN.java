@@ -85,6 +85,7 @@ public class WitchVPN extends Boss {
         // Проверяем столкновение с игроком
         if (target != null && isVisible) {
             handlePlayerCollision(target);
+            Gdx.app.log("WitchVPN", "Checking collision with player at position: " + target.getPosition());
         }
 
         Gdx.app.log("WitchVPN", "Update called with deltaTime: " + deltaTime);
@@ -116,6 +117,7 @@ public class WitchVPN extends Boss {
             // Проверяем, нужно ли телепортироваться
             if (teleportTimer >= teleportInterval) {
                 startTeleport();
+                teleportTimer = 0f;
             }
 
             // Проверяем, нужно ли атаковать
@@ -310,31 +312,33 @@ public class WitchVPN extends Boss {
     }
 
     private void handlePlayerCollision(Player player) {
-        if (player.getCollisionComponent().collidesWith(getCollisionComponent())) {
-            // Проверяем, что игрок находится выше ведьмы
-            if (player.getPosition().y > getPosition().y + getCollisionComponent().getBounds().height / 2) {
-                // Игрок прыгнул на ведьму
-                currentHits++;
-                Gdx.app.log("WitchVPN", "Player hit witch from above! Hits: " + currentHits + "/" + hitsToDefeat);
-                
-                // Отбрасываем игрока на случайную платформу
-                teleportPlayerToRandomPlatform(player);
-                
-                if (currentHits >= hitsToDefeat) {
-                    // Ведьма побеждена
-                    Gdx.app.log("WitchVPN", "Witch defeated!");
-                    setActive(false);
+        if (player != null && collision != null && player.getCollisionComponent() != null) {
+            if (collision.collidesWith(player.getCollisionComponent())) {
+                // Проверяем, что игрок находится выше ведьмы
+                if (player.getPosition().y > position.y + collision.getBounds().height / 2) {
+                    // Игрок прыгнул на ведьму
+                    currentHits++;
+                    Gdx.app.log("WitchVPN", "Player hit witch from above! Hits: " + currentHits + "/" + hitsToDefeat);
+                    
+                    // Отбрасываем игрока на случайную платформу
+                    teleportPlayerToRandomPlatform(player);
+                    
+                    if (currentHits >= hitsToDefeat) {
+                        // Ведьма побеждена
+                        Gdx.app.log("WitchVPN", "Witch defeated!");
+                        setActive(false);
+                    }
+                } else {
+                    // Игрок получил урон от ведьмы
+                    player.takeDamage(15f);
+                    // Отбрасываем игрока вверх и в сторону от ведьмы
+                    Vector2 knockbackDirection = new Vector2(player.getPosition()).sub(position).nor();
+                    player.getVelocity().set(
+                        knockbackDirection.x * 300f, // Горизонтальная составляющая отбрасывания
+                        400f // Вертикальная составляющая отбрасывания
+                    );
+                    Gdx.app.log("WitchVPN", "Player knocked back with velocity: " + player.getVelocity());
                 }
-            } else {
-                // Игрок получил урон от ведьмы
-                player.takeDamage(1);
-                // Отбрасываем игрока вверх и в сторону от ведьмы
-                Vector2 knockbackDirection = new Vector2(player.getPosition()).sub(getPosition()).nor();
-                player.getVelocity().set(
-                    knockbackDirection.x * 300f, // Горизонтальная составляющая отбрасывания
-                    400f // Вертикальная составляющая отбрасывания
-                );
-                Gdx.app.log("WitchVPN", "Player knocked back with velocity: " + player.getVelocity());
             }
         }
     }
@@ -351,7 +355,7 @@ public class WitchVPN extends Boss {
             float teleportY = targetPlatform.y + targetPlatform.height + 50; // 50 пикселей над платформой
             
             // Телепортируем игрока
-            player.setPosition(teleportX, teleportY);
+            player.getPosition().set(teleportX, teleportY);
             
             // Сбрасываем скорость игрока
             player.getVelocity().set(0, 0);

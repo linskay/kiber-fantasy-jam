@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.Gdx;
 import com.cyberkingdom.items.Item;
+import com.cyberkingdom.items.ItemType;
 import com.cyberkingdom.screens.GameScreen;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.physics.PhysicsSystem;
@@ -19,7 +20,6 @@ public class EntityFactory {
 
     // Используйте enum или константы, чтобы избежать ошибок в строках
     private static final String[] ITEMS = {
-     
             "USB_SKATERT", "CRYPTO_SHOVEL", "RTX_4090", "TUSHENKA", "KNIGA", "WIFI_KEY"
     };
 
@@ -49,9 +49,6 @@ public class EntityFactory {
             type = Enemy.EnemyType.TROLL_BOT;
         }
         Enemy enemy = new Enemy(type, x, y, spriteManager);
-        if (enemy.getAnimation() != null) {
-            enemy.getAnimation().setFrameDuration(0.1f);
-        }
         return enemy;
     }
 
@@ -67,9 +64,6 @@ public class EntityFactory {
             default:
                 boss = new Boss(name, x, y, spriteManager);
                 break;
-        }
-        if (boss.getAnimation() != null) {
-            boss.getAnimation().setFrameDuration(0.1f);
         }
         return boss;
     }
@@ -98,7 +92,15 @@ public class EntityFactory {
                 }
             }
 
-            Item item = new Item(itemType, position, quantity, spriteManager);
+            ItemType type;
+            try {
+                type = ItemType.valueOf(itemType);
+            } catch (IllegalArgumentException e) {
+                Gdx.app.error("EntityFactory", "Unknown item type: " + itemType);
+                return null;
+            }
+
+            Item item = new Item(type, position, quantity, spriteManager);
             item.setName(itemType);
             
             Gdx.app.log("EntityFactory", "Created item: " + itemType + " with texture size: " + 

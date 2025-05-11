@@ -211,7 +211,7 @@ public class InventoryWindow extends Window {
         List<Item> items = new ArrayList<>(inventory.getItems());
         if (index < items.size()) {
             Item selectedItem = items.get(index);
-            String itemType = selectedItem.getItemType().toLowerCase();
+            String itemType = selectedItem.getItemType().toString().toLowerCase();
 
             switch (itemType) {
                 case "crypto_coin":

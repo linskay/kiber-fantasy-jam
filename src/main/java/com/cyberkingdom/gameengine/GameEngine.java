@@ -95,7 +95,7 @@ public class GameEngine extends Game {
 
     public void startGame() {
         loadCurrentLevel();
-        setScreen(gameScreen); // Убрано лишнее приведение к Screen
+        setScreen(new LoadingScreen(this));
     }
 
     private void loadCurrentLevel() {
@@ -235,4 +235,5 @@ public class GameEngine extends Game {
     public Texture getMainMenuBackground() { return mainMenuBackground; }
     public Texture getCursorTexture() { return cursorTexture; }
     public void resumeMusic() { if (mainMenuScreen != null) mainMenuScreen.resumeMusic(); }
+    public GameScreen getGameScreen() { return gameScreen; }
 }

@@ -9,6 +9,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.cyberkingdom.items.Item;
+import com.cyberkingdom.rendering.SpriteManager;
 
 public class Player extends GameEntity implements Collidable {
     private CollisionComponent collision;
@@ -36,22 +38,46 @@ public class Player extends GameEntity implements Collidable {
     private GameScreen gameScreen;
     private Texture texture;
     private AnimationComponent animation;
+    private float jumpForce = 400f;
+    private float direction = 1;
+    private boolean isInvulnerable = false;
+    private float invulnerabilityTime = 0;
+    private float invulnerabilityDuration = 1.0f;
+    private boolean isDead = false;
+    private float deathTime = 0;
+    private float deathDuration = 1.0f;
+    private Vector2 respawnPosition;
+    private float respawnHealth;
+    private int respawnCoins;
+    private Inventory respawnInventory;
+    private boolean isRespawned = false;
+    private float respawnTime = 0;
+    private float respawnDuration = 1.0f;
+    private boolean isRespawnInvulnerable = false;
+    private float respawnInvulnerabilityTime = 0;
+    private float respawnInvulnerabilityDuration = 2.0f;
+    private Rectangle bounds;
 
-    public Player(Vector2 position, GameScreen gameScreen) {
-        super("Player");
+    public Player(Vector2 position, SpriteManager spriteManager) {
+        super("Player", spriteManager);
         this.position = position;
         this.velocity = new Vector2();
-        this.gameScreen = gameScreen;
-        this.collision = new CollisionComponent(64, 64);
-        this.inventory = new Inventory();
+        this.moveSpeed = 200f;
+        this.jumpForce = 400f;
+        this.gravity = 980f;
+        this.isJumping = false;
+        this.isFacingRight = true;
         this.health = 100;
         this.maxHealth = 100;
         this.coins = 0;
         this.cryptoCoins = 0;
-        this.isJumping = false;
+        this.inventory = new Inventory(spriteManager);
+        this.respawnPosition = new Vector2(position);
+        this.respawnInventory = new Inventory(spriteManager);
+        this.collision = new CollisionComponent(32, 32);
+        this.collision.update(position);
         this.isFalling = false;
         this.isMoving = false;
-        this.isFacingRight = true;
         this.isAttacking = false;
         this.attackCooldown = 0;
         this.attackDuration = 0;
@@ -59,7 +85,26 @@ public class Player extends GameEntity implements Collidable {
         this.attackDamage = 20;
         this.attackCooldownTime = 0.5f;
         this.attackDurationTime = 0.2f;
-        this.collision.update(position);
+        this.isInvulnerable = false;
+        this.invulnerabilityTime = 0;
+        this.invulnerabilityDuration = 1.0f;
+        this.isDead = false;
+        this.deathTime = 0;
+        this.deathDuration = 1.0f;
+        this.respawnHealth = maxHealth;
+        this.respawnCoins = coins;
+        if (inventory != null && inventory.getItems() != null) {
+            for (Item item : inventory.getItems()) {
+                respawnInventory.addItem(item);
+            }
+        }
+        this.isRespawned = false;
+        this.respawnTime = 0;
+        this.respawnDuration = 1.0f;
+        this.isRespawnInvulnerable = false;
+        this.respawnInvulnerabilityTime = 0;
+        this.respawnInvulnerabilityDuration = 2.0f;
+        this.bounds = new Rectangle(position.x, position.y, 32, 32);
     }
 
     @Override
@@ -69,13 +114,14 @@ public class Player extends GameEntity implements Collidable {
 
     @Override
     public Rectangle getCollisionBounds() {
-        return collision.getBounds();
+        bounds.setPosition(position.x, position.y);
+        return bounds;
     }
 
     public float getMaxHealth() { return maxHealth; }
     public Inventory getInventory() { return inventory; }
     public boolean isJumping() { return isJumping; }
-    public void setJumping(boolean jumping) { isJumping = jumping; }
+    public void setJumping(boolean jumping) { this.isJumping = jumping; }
     public boolean isOnGround() { return onGround; }
     public void setOnGround(boolean onGround) { 
         this.onGround = onGround;
@@ -83,11 +129,23 @@ public class Player extends GameEntity implements Collidable {
             jumpsLeft = 2; // Восстанавливаем прыжки при приземлении
         }
     }
-    public boolean canJump() { return jumpsLeft > 0; }
-    public void useJump() { jumpsLeft--; }
-    public int getJumpsLeft() { return jumpsLeft; }
-    public float getJumpVelocity() { return jumpVelocity; }
-    public float getMoveSpeed() { return moveSpeed; }
+    public boolean canJump() {
+        return jumpsLeft > 0;
+    }
+    public void useJump() {
+        if (jumpsLeft > 0) {
+            jumpsLeft--;
+        }
+    }
+    public int getJumpsLeft() {
+        return jumpsLeft;
+    }
+    public float getJumpVelocity() {
+        return jumpVelocity;
+    }
+    public float getMoveSpeed() {
+        return moveSpeed;
+    }
     public float getHealth() { return health; }
     public void setHealth(float health) { this.health = Math.max(0, Math.min(maxHealth, health)); }
     public void takeDamage(float damage) { setHealth(health - damage); }
@@ -176,5 +234,9 @@ public class Player extends GameEntity implements Collidable {
             animation.dispose();
             animation = null;
         }
+    }
+
+    public void setGameScreen(GameScreen gameScreen) {
+        this.gameScreen = gameScreen;
     }
 }

@@ -3,13 +3,16 @@ package com.cyberkingdom.items;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.cyberkingdom.rendering.SpriteManager;
 
 public class Inventory {
     private List<Item> items;
     private int capacity = 9; // 3x3 ячейки
+    private SpriteManager spriteManager;
 
-    public Inventory() {
+    public Inventory(SpriteManager spriteManager) {
         this.items = new ArrayList<>();
+        this.spriteManager = spriteManager;
     }
 
     public int getCapacity() {
@@ -40,7 +43,7 @@ public class Inventory {
         }
         if (items.size() < capacity) {
             // Создаем копию предмета, чтобы отделить инвентарь от игрового объекта
-            Item copy = new Item(newItem.getItemType(), newItem.getPosition(), newItem.getQuantity());
+            Item copy = new Item(newItem.getItemType(), newItem.getPosition(), newItem.getQuantity(), spriteManager);
             items.add(copy);
             return true;
         }

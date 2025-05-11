@@ -49,4 +49,12 @@ public class EntitySystem {
         clear();
         entities = null;
     }
+
+    public void update(float deltaTime) {
+        for (GameEntity entity : entities) {
+            if (entity != null && entity.isActive()) {
+                entity.update(deltaTime);
+            }
+        }
+    }
 }

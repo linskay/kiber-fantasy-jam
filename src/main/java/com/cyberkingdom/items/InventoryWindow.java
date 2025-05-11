@@ -36,19 +36,19 @@ public class InventoryWindow extends Window {
     private Skin skin;
     private Table gridTable;
     private Inventory inventory;
-    private Player player; // Добавлено поле игрока
+    private Player player;
 
     // Поля для подсказки
     private Label tooltipLabel;
     private Table tooltipTable;
 
     public InventoryWindow(Skin skin, float x, float y, Inventory inventory,
-                           Player player,EntitySystem entitySystem,
-                           EntityFactory entityFactory,PhysicsSystem physicsSystem) {
+                           Player player, EntitySystem entitySystem,
+                           EntityFactory entityFactory, PhysicsSystem physicsSystem) {
         super("Инвентарь", skin);
         this.skin = skin;
         this.inventory = inventory;
-        this.player = player; // Инициализация игрока
+        this.player = player;
         this.entitySystem = entitySystem;
         this.entityFactory = entityFactory;
         this.physicsSystem = physicsSystem;
@@ -66,7 +66,6 @@ public class InventoryWindow extends Window {
         }
 
         this.add(gridTable).expand().fill();
-
         this.setSize(300, 400);
         this.setVisible(false);
         this.setMovable(false);

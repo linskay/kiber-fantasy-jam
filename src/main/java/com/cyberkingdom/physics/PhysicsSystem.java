@@ -69,116 +69,86 @@ public class PhysicsSystem {
         return player;
     }
 
+    public InputHandler getInputHandler() {
+        return inputHandler;
+    }
+
     public void update(float deltaTime) {
-        if (!isPlayerInitialized) {
-            initializePlayer();
-        }
-        if (inputHandler != null && player != null) {
-            inputHandler.update(deltaTime);
-        } else {
-            Gdx.app.error("Physics", "Player or InputHandler not initialized in PhysicsSystem");
+        if (player == null) {
+            Gdx.app.log("PhysicsSystem", "Player is null in update");
             return;
         }
 
-        // Обновляем физику игрока
-        Vector2 position = player.getPosition();
-        Vector2 velocity = player.getVelocity();
-
         // Применяем гравитацию
+        Vector2 velocity = player.getVelocity();
         velocity.y += gravity * deltaTime;
 
-        // Сохраняем предыдущую позицию
-        float previousY = position.y;
-        float previousX = position.x;
-
         // Обновляем позицию
-        position.add(velocity.cpy().scl(deltaTime));
-
-        // Ограничения по X
-        float minX = 0;
-        float maxX = 1200 - 64; // 1200 — ширина уровня, 64 — ширина игрока
-        if (position.x < minX) {
-            position.x = minX;
-            if (velocity.x < 0) velocity.x = 0;
-        } else if (position.x > maxX) {
-            position.x = maxX;
-            if (velocity.x > 0) velocity.x = 0;
-        }
-
-        // Проверяем столкновение с верхней границей
-        if (position.y > MAX_Y_POSITION) {
-            position.y = MAX_Y_POSITION;
-            velocity.y = BOUNCE_VELOCITY; // Отскок вниз
-            Gdx.app.debug("Physics", "Player hit ceiling, bouncing down");
-        }
+        Vector2 position = player.getPosition();
+        position.x += velocity.x * deltaTime;
+        position.y += velocity.y * deltaTime;
 
         // Проверяем столкновения с платформами
         boolean onGround = false;
-        Rectangle playerBounds = player.getCollisionBounds();
-        
         for (Rectangle platform : platforms) {
-            if (playerBounds.overlaps(platform)) {
-                // Проверяем, падает ли игрок на платформу сверху
-                if (velocity.y < 0 && previousY > platform.y + platform.height - 5) {
-                    position.y = platform.y + platform.height;
-                    velocity.y = 0;
-                    onGround = true;
-                    player.setOnGround(true);
-                    player.setJumping(false);
-                }
-                // Проверяем, прыгает ли игрок вверх
-                else if (velocity.y > 0 && previousY < platform.y) {
-                    position.y = platform.y - playerBounds.height;
-                    velocity.y = 0;
-                }
-                // Проверяем столкновение с левой стороной платформы
-                else if (velocity.x > 0 && previousX < platform.x) {
-                    position.x = platform.x - playerBounds.width;
+            if (checkCollision(player, platform)) {
+                Gdx.app.log("PhysicsSystem", "Collision detected with platform");
+                // Определяем направление столкновения
+                float overlapX = Math.min(
+                    player.getCollisionBounds().x + player.getCollisionBounds().width - platform.x,
+                    platform.x + platform.width - player.getCollisionBounds().x
+                );
+                float overlapY = Math.min(
+                    player.getCollisionBounds().y + player.getCollisionBounds().height - platform.y,
+                    platform.y + platform.height - player.getCollisionBounds().y
+                );
+
+                if (overlapX < overlapY) {
+                    // Горизонтальное столкновение
+                    if (position.x < platform.x) {
+                        position.x = platform.x - player.getCollisionBounds().width;
+                    } else {
+                        position.x = platform.x + platform.width;
+                    }
                     velocity.x = 0;
-                }
-                // Проверяем столкновение с правой стороной платформы
-                else if (velocity.x < 0 && previousX > platform.x + platform.width) {
-                    position.x = platform.x + platform.width;
-                    velocity.x = 0;
+                } else {
+                    // Вертикальное столкновение
+                    if (position.y < platform.y) {
+                        position.y = platform.y - player.getCollisionBounds().height;
+                        velocity.y = 0;
+                    } else {
+                        position.y = platform.y + platform.height;
+                        velocity.y = 0;
+                        onGround = true;
+                    }
                 }
             }
         }
 
-        // Проверяем выход за пределы экрана
-        if (position.y < MIN_Y_POSITION) {
-            position.y = MIN_Y_POSITION;
+        // Обновляем позицию и скорость игрока
+        player.setPosition(position.x, position.y);
+        player.setVelocity(velocity.x, velocity.y);
+        player.setOnGround(onGround);
+
+        // Если игрок на земле и не прыгает, сбрасываем вертикальную скорость
+        if (onGround && !player.isJumping()) {
             velocity.y = 0;
-            onGround = true;
-            player.setOnGround(true);
+            player.setVelocity(velocity.x, velocity.y);
+        }
+
+        // Обновляем состояние прыжка
+        if (player.isJumping() && velocity.y <= 0) {
             player.setJumping(false);
-            Gdx.app.debug("Physics", "Player reached ground level");
         }
 
-        // Ограничиваем максимальную скорость падения
-        if (velocity.y < -600f) {
-            velocity.y = -600f;
+        // Обновляем обработчик ввода
+        if (inputHandler != null) {
+            inputHandler.update(deltaTime);
         }
+    }
 
-        // Если игрок не на земле, сбрасываем флаг
-        if (!onGround) {
-            player.setOnGround(false);
-        }
-
-        // Обновляем коллизию игрока
-        player.getCollisionComponent().update(position);
-
-        // Проверка столкновений с монетами
-        for (GameEntity entity : entitySystem.getEntities()) {
-            if (entity instanceof Item && ((Item) entity).getItemType().equals("COIN")) {
-                Item coin = (Item) entity;
-                if (coin.isActive() && player.getCollisionComponent().getBounds().overlaps(coin.getCollisionComponent().getBounds())) {
-                    player.collectCoin();
-                    if (coinSound != null) coinSound.play();
-                    coin.setActive(false);
-                    entitySystem.removeEntity(coin);
-                }
-            }
-        }
+    private boolean checkCollision(Player player, Rectangle platform) {
+        return player.getCollisionBounds().overlaps(platform);
     }
 
     public void dispose() {

@@ -53,6 +53,14 @@ public class AnimationComponent {
         }
     }
 
+    public void clearFrames() {
+        if (frames != null) {
+            frames.clear();
+            currentFrameIndex = 0;
+            stateTime = 0f;
+        }
+    }
+
     public void dispose() {
         if (frames != null) {
             frames.clear();

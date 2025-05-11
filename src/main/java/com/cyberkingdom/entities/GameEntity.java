@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.physics.CollisionComponent;
@@ -16,17 +17,20 @@ public abstract class GameEntity {
     protected String name;
     protected boolean isActive;
     protected AnimationComponent animation;
-    protected static SpriteManager spriteManager;
+    protected SpriteManager spriteManager;
     protected Texture texture;
     protected CollisionComponent collision;
 
-    public GameEntity(String name) {
+    public GameEntity(String name, SpriteManager spriteManager) {
         this.name = name;
+        this.spriteManager = spriteManager;
         this.position = new Vector2();
         this.velocity = new Vector2();
         this.isActive = true;
         this.animation = new AnimationComponent();
-        setupAnimations();
+        if (spriteManager != null) {
+            setupAnimations();
+        }
     }
 
     public Vector2 getPosition() { return position; }
@@ -65,6 +69,7 @@ public abstract class GameEntity {
                 " with size: " + texture.getWidth() + "x" + texture.getHeight());
         } else {
             Gdx.app.error("GameEntity", "No frames found for entity: " + name);
+            createFallbackTexture();
         }
     }
 
@@ -117,11 +122,6 @@ public abstract class GameEntity {
             " with size: " + texture.getWidth() + "x" + texture.getHeight());
     }
 
-    public static void setSpriteManager(SpriteManager manager) {
-        spriteManager = manager;
-        Gdx.app.log("GameEntity", "SpriteManager set");
-    }
-
     public void update(float deltaTime) {
         if (animation != null) {
             animation.update(deltaTime);
@@ -151,6 +151,27 @@ public abstract class GameEntity {
         }
         if (collision != null) {
             collision = null;
+        }
+    }
+
+    public void render(SpriteBatch batch) {
+        if (!isActive) return;
+
+        float x = position.x;
+        float y = position.y;
+        float width = 64;
+        float height = 64;
+
+        if (animation != null) {
+            TextureRegion currentFrame = animation.getCurrentFrame(Gdx.graphics.getDeltaTime());
+            if (currentFrame != null) {
+                batch.draw(currentFrame, x, y, width, height);
+                return;
+            }
+        }
+
+        if (texture != null) {
+            batch.draw(texture, x, y, width, height);
         }
     }
 }

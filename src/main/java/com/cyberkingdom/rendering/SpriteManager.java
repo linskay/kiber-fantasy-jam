@@ -18,31 +18,27 @@ public class SpriteManager {
     }
 
     public void loadTextures() {
-        try {
-            // Загружаем основные текстуры
-            loadTexture("src/main/resources/assets/platform.png", "Platform");
-            loadTexture("src/main/resources/assets/Coin.png", "COIN");
-            loadTexture("src/main/resources/assets/entities/player.png", "Player");
-            loadTexture("src/main/resources/assets/entities.png", "WITCH_VPN");
-            loadTexture("src/main/resources/assets/entities.png", "CAT_MINER");
-            
-            
-            // Новые уникальные предметы
-            loadTexture("src/main/resources/assets/items/USB_Skatert.png", "USB_SKATERT");
-            loadTexture("src/main/resources/assets/items/kriptoLopata.png", "CRYPTO_SHOVEL");
-            loadTexture("src/main/resources/assets/items/RTX4090.png", "RTX_4090");
-            loadTexture("src/main/resources/assets/items/tyshonka.png", "TUSHENKA");
-            loadTexture("src/main/resources/assets/items/kniga.png", "KNIGA");
-            loadTexture("src/main/resources/assets/items/key.png", "WIFI_KEY");
-            
-            Gdx.app.log("SpriteManager", "All textures loaded successfully");
-        } catch (Exception e) {
-            Gdx.app.error("SpriteManager", "Error loading textures: " + e.getMessage(), e);
-            throw new RuntimeException("Failed to load textures", e);
-        }
+        // Загрузка текстур игрока
+        loadTexture("Player", "assets/entities/player.png");
+        
+        // Загрузка текстур боссов
+        loadTexture("WITCH_VPN", "assets/entities/witch_vpn.png");
+        loadTexture("CAT_MINER", "assets/entities/cat_miner.png");
+        
+        // Загрузка текстур предметов
+        loadTexture("COIN", "assets/Coin.png");
+        loadTexture("USB_SKATERT", "assets/items/USB_Skatert.png");
+        loadTexture("CRYPTO_SHOVEL", "assets/items/kriptoLopata.png");
+        loadTexture("RTX_4090", "assets/items/RTX4090.png");
+        loadTexture("TUSHENKA", "assets/items/tyshonka.png");
+        loadTexture("KNIGA", "assets/items/kniga.png");
+        loadTexture("WIFI_KEY", "assets/items/key.png");
+        
+        // Загрузка текстур платформы
+        loadTexture("Platform", "assets/platform.png");
     }
 
-    private void loadTexture(String path, String name) {
+    private void loadTexture(String name, String path) {
         try {
             if (!Gdx.files.internal(path).exists()) {
                 Gdx.app.error("SpriteManager", "Texture file not found: " + path);
@@ -60,103 +56,87 @@ public class SpriteManager {
         }
     }
 
-    private void setupSpriteRegions() {
+    public void setupSpriteRegions() {
         // Настройка регионов для платформы
         Texture platformTexture = textures.get("Platform");
         if (platformTexture != null) {
-            Gdx.app.log("SpriteManager", "Setting up regions for platform texture (width=" + 
-                platformTexture.getWidth() + ", height=" + platformTexture.getHeight() + ")");
-            
-            TextureRegion[] platformRegions = new TextureRegion[1];
-            platformRegions[0] = new TextureRegion(platformTexture, 0, 0, platformTexture.getWidth(), platformTexture.getHeight());
-            spriteRegions.put("Platform", platformRegions);
-            Gdx.app.log("SpriteManager", "Set up platform regions");
+            spriteRegions.put("Platform", new TextureRegion[] { new TextureRegion(platformTexture) });
+            Gdx.app.log("SpriteManager", "Platform texture loaded successfully");
         } else {
-            Gdx.app.error("SpriteManager", "platform texture is null");
+            Gdx.app.error("SpriteManager", "Platform texture is null");
         }
 
-        // Настройка регионов для entities.png
-        Texture entitiesTexture = textures.get("Player");
-        if (entitiesTexture != null) {
-            Gdx.app.log("SpriteManager", "Setting up regions for entities texture (width=" + 
-                entitiesTexture.getWidth() + ", height=" + entitiesTexture.getHeight() + ")");
-            
-            TextureRegion[] playerRegions = new TextureRegion[1];
-            playerRegions[0] = new TextureRegion(entitiesTexture, 0, 0, 64, 64);
-            spriteRegions.put("Player", playerRegions);
-            Gdx.app.log("SpriteManager", "Set up player regions at (0,0)");
-
-            int tileSize = 32;
-            TextureRegion[] witchRegions = new TextureRegion[1];
-            witchRegions[0] = new TextureRegion(entitiesTexture, tileSize, 0, tileSize, tileSize);
-            spriteRegions.put("WITCH_VPN", witchRegions);
-            Gdx.app.log("SpriteManager", "Set up witch regions at (" + tileSize + ",0)");
-
-            TextureRegion[] catRegions = new TextureRegion[1];
-            catRegions[0] = new TextureRegion(entitiesTexture, tileSize * 2, 0, tileSize, tileSize);
-            spriteRegions.put("CAT_MINER", catRegions);
-            Gdx.app.log("SpriteManager", "Set up cat regions at (" + (tileSize * 2) + ",0)");
+        // Настройка регионов для игрока
+        Texture playerTexture = textures.get("Player");
+        if (playerTexture != null) {
+            spriteRegions.put("Player", new TextureRegion[] { new TextureRegion(playerTexture) });
+            Gdx.app.log("SpriteManager", "Player texture loaded successfully");
         } else {
-            Gdx.app.error("SpriteManager", "entities texture is null");
+            Gdx.app.error("SpriteManager", "Player texture is null");
         }
 
-        // Настройка регионов для монеты
+        // Настройка регионов для монет
         Texture coinTexture = textures.get("COIN");
         if (coinTexture != null) {
-            Gdx.app.log("SpriteManager", "Setting up regions for coin texture (width=" + 
-                coinTexture.getWidth() + ", height=" + coinTexture.getHeight() + ")");
-            
-            TextureRegion[] coinRegions = new TextureRegion[1];
-            coinRegions[0] = new TextureRegion(coinTexture, 0, 0, coinTexture.getWidth(), coinTexture.getHeight());
-            spriteRegions.put("COIN", coinRegions);
-            Gdx.app.log("SpriteManager", "Set up coin regions");
+            spriteRegions.put("COIN", new TextureRegion[] { new TextureRegion(coinTexture) });
+            Gdx.app.log("SpriteManager", "Coin texture loaded successfully");
         } else {
-            Gdx.app.error("SpriteManager", "coin texture is null");
+            Gdx.app.error("SpriteManager", "Coin texture is null");
         }
 
-        // Настройка регионов для items.png
-        Texture itemsTexture = textures.get("HARDWARE_WALLET");
-        if (itemsTexture != null) {
-            Gdx.app.log("SpriteManager", "Setting up regions for items texture (width=" + 
-                itemsTexture.getWidth() + ", height=" + itemsTexture.getHeight() + ")");
-            
-            int tileSize = 32;
-            TextureRegion[] hardwareWalletRegions = new TextureRegion[1];
-            hardwareWalletRegions[0] = new TextureRegion(itemsTexture, tileSize, 0, tileSize, tileSize);
-            spriteRegions.put("HARDWARE_WALLET", hardwareWalletRegions);
-            Gdx.app.log("SpriteManager", "Set up hardware wallet regions at (" + tileSize + ",0)");
-
-            TextureRegion[] vpnTokenRegions = new TextureRegion[1];
-            vpnTokenRegions[0] = new TextureRegion(itemsTexture, tileSize * 2, 0, tileSize, tileSize);
-            spriteRegions.put("VPN_TOKEN", vpnTokenRegions);
-            Gdx.app.log("SpriteManager", "Set up VPN token regions at (" + (tileSize * 2) + ",0)");
-
-            TextureRegion[] cryptoCoinRegions = new TextureRegion[1];
-            cryptoCoinRegions[0] = new TextureRegion(itemsTexture, tileSize * 3, 0, tileSize, tileSize);
-            spriteRegions.put("CRYPTO_COIN", cryptoCoinRegions);
-            Gdx.app.log("SpriteManager", "Set up crypto coin regions at (" + (tileSize * 3) + ",0)");
-
-            TextureRegion[] usbScatterRegions = new TextureRegion[1];
-            usbScatterRegions[0] = new TextureRegion(itemsTexture, tileSize * 4, 0, tileSize, tileSize);
-            spriteRegions.put("USB_SCATTER", usbScatterRegions);
-            Gdx.app.log("SpriteManager", "Set up USB scatter regions at (" + (tileSize * 4) + ",0)");
+        // Настройка регионов для боссов
+        Texture witchTexture = textures.get("WITCH_VPN");
+        if (witchTexture != null) {
+            spriteRegions.put("WITCH_VPN", new TextureRegion[] { new TextureRegion(witchTexture) });
+            Gdx.app.log("SpriteManager", "Witch VPN texture loaded successfully");
         } else {
-            Gdx.app.error("SpriteManager", "items texture is null");
+            Gdx.app.error("SpriteManager", "Witch VPN texture is null");
         }
 
-        // Новые уникальные предметы
-        Texture usbSkatert = textures.get("USB_SKATERT");
-        if (usbSkatert != null) spriteRegions.put("USB_SKATERT", new TextureRegion[]{new TextureRegion(usbSkatert)});
-        Texture cryptoShovel = textures.get("CRYPTO_SHOVEL");
-        if (cryptoShovel != null) spriteRegions.put("CRYPTO_SHOVEL", new TextureRegion[]{new TextureRegion(cryptoShovel)});
-        Texture rtx4090 = textures.get("RTX_4090");
-        if (rtx4090 != null) spriteRegions.put("RTX_4090", new TextureRegion[]{new TextureRegion(rtx4090)});
-        Texture tushenka = textures.get("TUSHENKA");
-        if (tushenka != null) spriteRegions.put("TUSHENKA", new TextureRegion[]{new TextureRegion(tushenka)});
-        Texture kniga = textures.get("KNIGA");
-        if (kniga != null) spriteRegions.put("KNIGA", new TextureRegion[]{new TextureRegion(kniga)});
-        Texture wifiKey = textures.get("WIFI_KEY");
-        if (wifiKey != null) spriteRegions.put("WIFI_KEY", new TextureRegion[]{new TextureRegion(wifiKey)});
+        Texture catTexture = textures.get("CAT_MINER");
+        if (catTexture != null) {
+            spriteRegions.put("CAT_MINER", new TextureRegion[] { new TextureRegion(catTexture) });
+            Gdx.app.log("SpriteManager", "Cat Miner texture loaded successfully");
+        } else {
+            Gdx.app.error("SpriteManager", "Cat Miner texture is null");
+        }
+
+        // Настройка регионов для предметов
+        Texture usbTexture = textures.get("USB_SKATERT");
+        if (usbTexture != null) {
+            spriteRegions.put("USB_SKATERT", new TextureRegion[] { new TextureRegion(usbTexture) });
+            Gdx.app.log("SpriteManager", "USB Skatert texture loaded successfully");
+        }
+
+        Texture shovelTexture = textures.get("CRYPTO_SHOVEL");
+        if (shovelTexture != null) {
+            spriteRegions.put("CRYPTO_SHOVEL", new TextureRegion[] { new TextureRegion(shovelTexture) });
+            Gdx.app.log("SpriteManager", "Crypto Shovel texture loaded successfully");
+        }
+
+        Texture rtxTexture = textures.get("RTX_4090");
+        if (rtxTexture != null) {
+            spriteRegions.put("RTX_4090", new TextureRegion[] { new TextureRegion(rtxTexture) });
+            Gdx.app.log("SpriteManager", "RTX 4090 texture loaded successfully");
+        }
+
+        Texture tushonkaTexture = textures.get("TUSHENKA");
+        if (tushonkaTexture != null) {
+            spriteRegions.put("TUSHENKA", new TextureRegion[] { new TextureRegion(tushonkaTexture) });
+            Gdx.app.log("SpriteManager", "Tushenka texture loaded successfully");
+        }
+
+        Texture knigaTexture = textures.get("KNIGA");
+        if (knigaTexture != null) {
+            spriteRegions.put("KNIGA", new TextureRegion[] { new TextureRegion(knigaTexture) });
+            Gdx.app.log("SpriteManager", "Kniga texture loaded successfully");
+        }
+
+        Texture keyTexture = textures.get("WIFI_KEY");
+        if (keyTexture != null) {
+            spriteRegions.put("WIFI_KEY", new TextureRegion[] { new TextureRegion(keyTexture) });
+            Gdx.app.log("SpriteManager", "Wifi Key texture loaded successfully");
+        }
     }
 
     public TextureRegion[] getFrames(String name) {

@@ -7,6 +7,7 @@ import com.badlogic.gdx.Gdx;
 import com.cyberkingdom.items.Item;
 import com.cyberkingdom.screens.GameScreen;
 import com.cyberkingdom.rendering.SpriteManager;
+import com.cyberkingdom.physics.PhysicsSystem;
 
 import java.util.Random;
 
@@ -14,6 +15,7 @@ public class EntityFactory {
     private static int itemCount = 0;
     private static final Random random = new Random();
     private SpriteManager spriteManager;
+    private PhysicsSystem physicsSystem;
 
     // Используйте enum или константы, чтобы избежать ошибок в строках
     private static final String[] ITEMS = {
@@ -21,8 +23,9 @@ public class EntityFactory {
             "USB_SKATERT", "CRYPTO_SHOVEL", "RTX_4090", "TUSHENKA", "KNIGA", "WIFI_KEY"
     };
 
-    public EntityFactory(SpriteManager spriteManager) {
+    public EntityFactory(SpriteManager spriteManager, PhysicsSystem physicsSystem) {
         this.spriteManager = spriteManager;
+        this.physicsSystem = physicsSystem;
     }
 
     public GameEntity createPlayer(float x, float y) {
@@ -30,9 +33,9 @@ public class EntityFactory {
     }
 
     public GameEntity createPlayer(Vector2 position, GameScreen gameScreen) {
-        Player player = new Player(position, gameScreen);
-        if (player.getAnimation() != null) {
-            player.getAnimation().setFrameDuration(0.08f);
+        Player player = new Player(position, spriteManager);
+        if (gameScreen != null) {
+            player.setGameScreen(gameScreen);
         }
         return player;
     }
@@ -45,7 +48,7 @@ public class EntityFactory {
             System.err.println("Unknown enemy type: " + name + ". Using fallback type TROLL_BOT.");
             type = Enemy.EnemyType.TROLL_BOT;
         }
-        Enemy enemy = new Enemy(type, x, y);
+        Enemy enemy = new Enemy(type, x, y, spriteManager);
         if (enemy.getAnimation() != null) {
             enemy.getAnimation().setFrameDuration(0.1f);
         }
@@ -56,14 +59,13 @@ public class EntityFactory {
         Boss boss;
         switch (name.toUpperCase()) {
             case "CAT_MINER":
-                boss = new CatMiner(x, y);
+                boss = new CatMiner(x, y, spriteManager);
                 break;
             case "WITCH_VPN":
-                boss = new Boss(name, x, y);
-                boss.setMaxHitsToDefeat(5);
+                boss = new WitchVPN(x, y, physicsSystem, spriteManager);
                 break;
             default:
-                boss = new Boss(name, x, y);
+                boss = new Boss(name, x, y, spriteManager);
                 break;
         }
         if (boss.getAnimation() != null) {
@@ -96,8 +98,9 @@ public class EntityFactory {
                 }
             }
 
-            Item item = new Item(itemType, position, quantity);
+            Item item = new Item(itemType, position, quantity, spriteManager);
             item.setName(itemType);
+            
             Gdx.app.log("EntityFactory", "Created item: " + itemType + " with texture size: " + 
                 texture.getWidth() + "x" + texture.getHeight());
             return item;

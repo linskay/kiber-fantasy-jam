@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.entities.Collidable;
 import com.cyberkingdom.entities.GameEntity;
 import com.cyberkingdom.physics.CollisionComponent;
+import com.cyberkingdom.rendering.SpriteManager;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +30,7 @@ public class Item extends GameEntity implements Collidable {
     private boolean isActive;
     private int value;
     private static final Random random = new Random();
+    private SpriteManager spriteManager;
 
     public static final String ITEM_COIN = "COIN";
     public static final String ITEM_CRYPTO_COIN = "CRYPTO_COIN";
@@ -70,8 +72,8 @@ public class Item extends GameEntity implements Collidable {
         new ItemData(ITEM_WIFI_KEY, "WiFi-Ключ", "Нужен для финального босса", "Пароль: 12345678")
     );
 
-    public Item(String itemType, Vector2 position, int quantity) {
-        super(itemType);
+    public Item(String itemType, Vector2 position, int quantity, SpriteManager spriteManager) {
+        super(itemType, spriteManager);
         this.itemType = itemType;
         this.position = position;
         this.quantity = quantity;
@@ -150,5 +152,40 @@ public class Item extends GameEntity implements Collidable {
 
     public void decreaseQuantity(int amount) {
         this.quantity = Math.max(0, this.quantity - amount);
+    }
+
+    public void setSpriteManager(SpriteManager spriteManager) {
+        this.spriteManager = spriteManager;
+        setupAnimations();
+    }
+
+    public void initializeWithSpriteManager(SpriteManager spriteManager) {
+        this.spriteManager = spriteManager;
+        if (spriteManager != null) {
+            setupAnimations();
+        }
+    }
+
+    public void setTextureFromSpriteManager(SpriteManager spriteManager) {
+        if (spriteManager == null) {
+            Gdx.app.error("Item", "SpriteManager is null for item: " + itemType);
+            return;
+        }
+
+        TextureRegion[] frames = spriteManager.getFrames(itemType);
+        if (frames != null && frames.length > 0) {
+            texture = frames[0].getTexture();
+            if (animation != null) {
+                animation.clearFrames();
+                for (TextureRegion frame : frames) {
+                    animation.addFrame(frame);
+                }
+                animation.setFrameDuration(0.1f);
+            }
+            Gdx.app.log("Item", "Set texture for item: " + itemType + " with size: " + 
+                texture.getWidth() + "x" + texture.getHeight());
+        } else {
+            Gdx.app.error("Item", "No frames found for item: " + itemType);
+        }
     }
 }

@@ -12,8 +12,8 @@ public class SpriteRenderer {
     private final SpriteBatch batch;
     private final SpriteManager spriteManager;
 
-    public SpriteRenderer() {
-        this.batch = new SpriteBatch();
+    public SpriteRenderer(SpriteBatch batch) {
+        this.batch = batch;
         this.spriteManager = new SpriteManager();
     }
 
@@ -55,16 +55,12 @@ public class SpriteRenderer {
         }
     }
 
-    public void begin() {
-        batch.begin();
-    }
-
-    public void end() {
-        batch.end();
+    public SpriteManager getManager() {
+        return spriteManager;
     }
 
     public void dispose() {
-        batch.dispose();
+        // batch.dispose(); // Не освобождаем внешний batch здесь
     }
 
     public SpriteBatch getBatch() {

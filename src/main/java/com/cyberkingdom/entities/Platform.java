@@ -14,7 +14,7 @@ public class Platform extends GameEntity {
     private boolean isGround = false;
 
     public Platform(Rectangle rectangle, Texture texture) {
-        super("Platform");
+        super("Platform", null); // Платформы не используют SpriteManager
         this.texture = texture;
         this.rectangle = rectangle;
         this.collision = new CollisionComponent(rectangle.width, rectangle.height);

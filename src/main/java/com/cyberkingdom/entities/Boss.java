@@ -3,24 +3,36 @@ package com.cyberkingdom.entities;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.physics.CollisionComponent;
+import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 public class Boss extends GameEntity implements Collidable {
-    private CollisionComponent collision;
     private String type;
+    private float health;
+    private float maxHealth;
+    private float damage;
+    private float speed;
+    protected CollisionComponent collision;
+    private float attackRange = 200f;
+    private float attackCooldown = 2f;
+    private float timeSinceLastAttack = 0f;
     private int hitCount = 0;
     private int maxHitsToDefeat = 3;
     private float hitCooldown = 1.0f;
     private float timeSinceLastHit = 0f;
     private Player target;
-    private float moveSpeed = 150f;
-    private float attackCooldown = 2f;
-    private float timeSinceLastAttack = 0f;
+    protected float moveSpeed = 150f;
 
-    public Boss(String name, float x, float y) {
-        super(name);
-        this.type = name;
-        this.position.set(x, y);
+    public Boss(String name, float x, float y, SpriteManager spriteManager) {
+        super(name, spriteManager);
+        this.position = new Vector2(x, y);
+        this.health = 500;
+        this.maxHealth = 500;
+        this.damage = 30;
+        this.speed = 150;
         this.collision = new CollisionComponent(64, 64);
+        this.collision.update(position);
+        this.type = name;
     }
 
     public void setTarget(Player player) {
@@ -45,27 +57,6 @@ public class Boss extends GameEntity implements Collidable {
         setActive(false);
         System.out.println(getType() + " побежден!");
     }
-
-//    public void update(float deltaTime) {
-//        collision.update(position);
-//        if (timeSinceLastHit < hitCooldown) {
-//            timeSinceLastHit += deltaTime;
-//        }
-//        if (timeSinceLastAttack < attackCooldown) {
-//            timeSinceLastAttack += deltaTime;
-//        }
-//
-//        if (target != null && isActive()) {
-//            Vector2 direction = new Vector2(target.getPosition()).sub(position).nor();
-//            velocity.set(direction.scl(moveSpeed));
-//
-//            if (collision.collidesWith(target.getCollisionComponent()) && timeSinceLastAttack >= attackCooldown) {
-//                target.takeDamage(10f);
-//                System.out.println("Ведьма VPN атакует игрока! Здоровье игрока: " + target.getHealth());
-//                timeSinceLastAttack = 0f;
-//            }
-//        }
-//    }
 
     public boolean tryRegisterHit() {
         if (!isActive()) return false;
@@ -113,4 +104,12 @@ public class Boss extends GameEntity implements Collidable {
                 timeSinceLastAttack = 0f;
             }
         }
-}}
+    }
+
+    @Override
+    public void render(SpriteBatch batch) {
+        if (isActive()) {
+            super.render(batch);
+        }
+    }
+}

@@ -151,7 +151,7 @@ public class MainMenuScreen implements Screen {
     private void handleInput() {
         if(Gdx.input.isKeyJustPressed(Input.Keys.W)) selectedIndex--;
         if(Gdx.input.isKeyJustPressed(Input.Keys.S)) selectedIndex++;
-        if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+        if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if(selectSound != null) selectSound.play(0.7f);
             handleSelection();
         }

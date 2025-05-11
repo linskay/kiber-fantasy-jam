@@ -21,14 +21,14 @@ public class InputHandler {
     }
 
     public void handleJump() {
-        // Проверяем нажатие клавиши прыжка (SPACE или W)
         if ((Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.W)) && !jumpPressed) {
+            Gdx.app.log("InputHandler", "Jump key pressed, canJump: " + player.canJump());
             if (player.canJump()) {
                 player.setVelocity(player.getVelocity().x, player.getJumpVelocity());
                 player.setJumping(true);
                 player.setOnGround(false);
                 player.useJump();
-                Gdx.app.debug("Input", "Jump initiated, jumps left: " + player.getJumpsLeft());
+                Gdx.app.log("InputHandler", "Jump initiated, jumps left: " + player.getJumpsLeft());
             }
             jumpPressed = true;
         } else if (!Gdx.input.isKeyPressed(Input.Keys.SPACE) && !Gdx.input.isKeyPressed(Input.Keys.W)) {
@@ -44,14 +44,14 @@ public class InputHandler {
             targetVelocity = player.getMoveSpeed();
         }
 
-        // Простое движение без ускорения/замедления
         player.setVelocity(targetVelocity, player.getVelocity().y);
     }
 
-    private void handleInventory() {
-        if (Gdx.input.isKeyPressed(Input.Keys.E) && !inventoryPressed) {
+    public void handleInventory() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.E) && !inventoryPressed) {
             inventoryVisible = !inventoryVisible;
             inventoryPressed = true;
+            Gdx.app.log("InputHandler", "Inventory visibility changed to: " + inventoryVisible);
         } else if (!Gdx.input.isKeyPressed(Input.Keys.E)) {
             inventoryPressed = false;
         }
@@ -62,6 +62,6 @@ public class InputHandler {
     }
 
     public void dispose() {
-        player = null;
+        // Не делаем ничего, так как player является final
     }
 }

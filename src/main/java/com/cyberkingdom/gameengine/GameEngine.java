@@ -15,6 +15,7 @@ import com.cyberkingdom.boss.BossFightLogic;
 import com.cyberkingdom.entities.*;
 import com.cyberkingdom.input.InputHandler;
 import com.cyberkingdom.physics.PhysicsSystem;
+import com.cyberkingdom.physics.PhysicsSystemBuilder;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.rendering.SpriteRenderer;
 import com.cyberkingdom.screens.*;
@@ -57,11 +58,12 @@ public class GameEngine extends Game {
         try {
             batch = new SpriteBatch();
             spriteManager = new SpriteManager();
-            GameEntity.setSpriteManager(spriteManager);
-            spriteRenderer = new SpriteRenderer();
+            spriteRenderer = new SpriteRenderer(batch);
             entitySystem = new EntitySystem();
-            entityFactory = new EntityFactory(spriteManager);
-            physicsSystem = new PhysicsSystem(entitySystem);
+            physicsSystem = new PhysicsSystemBuilder()
+                    .setEntitySystem(entitySystem)
+                    .createPhysicsSystem();
+            entityFactory = new EntityFactory(spriteManager, physicsSystem);
 
             // Инициализация шрифта с поддержкой кириллицы
             FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
@@ -75,6 +77,11 @@ public class GameEngine extends Game {
             selectSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/select.mp3"));
             mainMenuBackground = new Texture(Gdx.files.internal("assets/ui/background.png"));
             cursorTexture = new Texture(Gdx.files.internal("assets/kursor.png"));
+
+            // Инициализация UI после загрузки всех ресурсов
+            uiManager = new UIManager(spriteRenderer, null, null, this);
+
+            Gdx.app.log("GameEngine", "Core systems initialized successfully");
         } catch (Exception e) {
             Gdx.app.error("GameEngine", "Failed to initialize core systems", e);
             throw new RuntimeException("Core systems initialization failed", e);
@@ -96,16 +103,16 @@ public class GameEngine extends Game {
             entitySystem.clear();
             physicsSystem.clearPlatforms();
 
-            // Создаем игрока
+            // Создаём игрока один раз
             Player player = (Player) entityFactory.createPlayer(new Vector2(100, 300), null);
             entitySystem.addEntity(player);
             physicsSystem.setPlayer(player);
 
-            // Инициализируем UI
+            // Передаём этого игрока во все системы
             inputHandler = new InputHandler(player);
             uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
 
-            // Создаем LevelLoader
+            // Создаём LevelLoader
             levelLoader = new LevelLoader(
                     spriteManager,
                     entitySystem,
@@ -114,17 +121,17 @@ public class GameEngine extends Game {
                     currentLevelIndex + 1
             );
 
-            // Создаем BossFightLogic
+            // Создаём BossFightLogic
             bossFightLogic = new BossFightLogic(levelLoader, player, this);
 
-            // Создаем GameScreen
+            // Создаём GameScreen
             gameScreen = new GameScreen(
-                    entitySystem,
-                    physicsSystem,
-                    levelLoader,
-                    spriteRenderer,
-                    uiManager,
-                    bossFightLogic
+                this,
+                entitySystem,
+                physicsSystem,
+                levelLoader,
+                uiManager,
+                spriteRenderer
             );
         } catch (Exception e) {
             Gdx.app.error("GameEngine", "Level loading failed", e);
@@ -134,16 +141,16 @@ public class GameEngine extends Game {
 
     private void createFallbackEnvironment() {
         try {
-            // Создаем игрока
+            // Создаём игрока один раз
             Player player = (Player) entityFactory.createPlayer(new Vector2(100, 300), null);
             entitySystem.addEntity(player);
             physicsSystem.setPlayer(player);
 
-            // Инициализируем UI
+            // Передаём этого игрока во все системы
             inputHandler = new InputHandler(player);
             uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
 
-            // Создаем LevelLoader
+            // Создаём LevelLoader
             levelLoader = new LevelLoader(
                     spriteManager,
                     entitySystem,
@@ -152,17 +159,17 @@ public class GameEngine extends Game {
                     1
             );
 
-            // Создаем BossFightLogic
+            // Создаём BossFightLogic
             bossFightLogic = new BossFightLogic(levelLoader, player, this);
 
-            // Создаем GameScreen
+            // Создаём GameScreen
             gameScreen = new GameScreen(
-                    entitySystem,
-                    physicsSystem,
-                    levelLoader,
-                    spriteRenderer,
-                    uiManager,
-                    bossFightLogic
+                this,
+                entitySystem,
+                physicsSystem,
+                levelLoader,
+                uiManager,
+                spriteRenderer
             );
         } catch (Exception e) {
             Gdx.app.error("GameEngine", "Fallback environment creation failed", e);

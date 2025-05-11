@@ -22,118 +22,110 @@ import com.badlogic.gdx.audio.Music;
 import com.cyberkingdom.audio.MusicManager;
 import com.cyberkingdom.items.ItemPickupSystem;
 import com.cyberkingdom.items.Item;
+import com.cyberkingdom.boss.BossSpawnManager;
+import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.InputProcessor;
+import com.cyberkingdom.input.InputHandler;
+import com.badlogic.gdx.Input;
+import com.cyberkingdom.gameengine.GameEngine;
+import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.InputAdapter;
 
 public class GameScreen implements Screen {
+    private final GameEngine engine;
     private final EntitySystem entitySystem;
     private final PhysicsSystem physicsSystem;
     private final LevelLoader levelLoader;
-    private final SpriteRenderer spriteRenderer;
     private final UIManager uiManager;
-    private final BossFightLogic bossFightLogic;
+    private final SpriteRenderer spriteRenderer;
     private final OrthographicCamera camera;
+    private final SpriteBatch batch;
+    private InputHandler inputHandler;
     private final ExtendViewport viewport;
     private BitmapFont font;
     private static final float LEVEL_WIDTH = 1200f;
     private static final float LEVEL_HEIGHT = 800f;
-    private Texture background;
+    private Texture backgroundTexture;
     private ShapeRenderer shapeRenderer;
     private SpriteBatch gameBatch;
     private Music levelMusic;
     private ItemPickupSystem itemPickupSystem;
+    private BossSpawnManager bossSpawnManager;
+    private SpriteManager spriteManager;
+    private Player player;
 
-    public GameScreen(EntitySystem entitySystem, PhysicsSystem physicsSystem, LevelLoader levelLoader, 
-                     SpriteRenderer spriteRenderer, UIManager uiManager, BossFightLogic bossFightLogic) {
+    public GameScreen(GameEngine engine, EntitySystem entitySystem, PhysicsSystem physicsSystem, 
+                     LevelLoader levelLoader, UIManager uiManager, SpriteRenderer spriteRenderer) {
+        this.engine = engine;
         this.entitySystem = entitySystem;
         this.physicsSystem = physicsSystem;
         this.levelLoader = levelLoader;
-        this.spriteRenderer = spriteRenderer;
         this.uiManager = uiManager;
-        this.bossFightLogic = bossFightLogic;
-        this.gameBatch = new SpriteBatch();
-        this.shapeRenderer = new ShapeRenderer();
+        this.batch = new SpriteBatch();
+        this.spriteRenderer = new SpriteRenderer(this.batch);
+        this.camera = new OrthographicCamera();
+        this.camera.setToOrtho(false, 800, 600);
+        this.inputHandler = physicsSystem.getInputHandler();
+        this.viewport = new ExtendViewport(LEVEL_WIDTH, LEVEL_HEIGHT, camera);
+        this.viewport.apply();
+        this.backgroundTexture = new Texture(Gdx.files.internal("assets/background_level1.png"));
         
-        // Инициализация камеры и вьюпорта
-        camera = new OrthographicCamera();
-        viewport = new ExtendViewport(LEVEL_WIDTH, LEVEL_HEIGHT, camera);
-        viewport.apply();
-        
-        // Инициализация шрифта
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = 24;
-        parameter.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<> ";
-        font = generator.generateFont(parameter);
-        generator.dispose();
-        
-        // Загрузка фона
-        background = new Texture(Gdx.files.internal("assets/background_level1.png"));
+        // Инициализация SpriteManager
+        this.spriteManager = new SpriteManager();
+        this.spriteManager.loadTextures();
+        this.spriteManager.setupSpriteRegions();
         
         // Инициализация системы сбора предметов
         Player player = physicsSystem.getPlayer();
         if (player != null) {
-            this.itemPickupSystem = new ItemPickupSystem(entitySystem, player);
+            this.itemPickupSystem = new ItemPickupSystem(entitySystem, player, levelLoader);
+            this.bossSpawnManager = new BossSpawnManager(entitySystem, levelLoader.getEntityFactory(), physicsSystem, player);
+            this.player = player;
         }
-        
+
         Gdx.app.log("GameScreen", "Initialized successfully");
     }
 
     @Override
     public void render(float delta) {
-        // Обновление
+        // Обновляем камеру
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+
+        // Очищаем экран
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // Рисуем фон
+        batch.begin();
+        batch.draw(backgroundTexture, 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
+        batch.end();
+
+        // Обновляем физику и сущности
         physicsSystem.update(delta);
-        if (bossFightLogic != null) {
-            bossFightLogic.update(delta);
-        }
+        entitySystem.update(delta);
+        
+        // Обновляем систему сбора предметов
         if (itemPickupSystem != null) {
             itemPickupSystem.update();
         }
-        if (levelLoader != null) {
-            levelLoader.update(delta, entitySystem, physicsSystem.getPlayer());
+
+        // Обновляем менеджер босса
+        if (bossSpawnManager != null) {
+            bossSpawnManager.update();
         }
-        
-        // Очистка экрана
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
-        // Обновление камеры
-        camera.update();
-        spriteRenderer.getBatch().setProjectionMatrix(camera.combined);
-        
-        // Рендеринг
-        spriteRenderer.getBatch().begin();
-        
-        // Рендеринг фона
-        if (background != null) {
-            spriteRenderer.getBatch().draw(background, 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
-        }
-        
-        // Рендеринг игровых объектов
-        int coinCount = 0;
+
+        // Рисуем все сущности
+        batch.begin();
         for (GameEntity entity : entitySystem.getEntities()) {
-            if (entity.isActive()) {
-                if (entity instanceof Item && ((Item) entity).getItemType().equals("COIN")) {
-                    coinCount++;
-                    Gdx.app.debug("GameScreen", "Rendering coin at: " + entity.getPosition());
-                }
-                if (!(entity instanceof Player)) {
-                    spriteRenderer.render(entity);
-                }
-            }
+            entity.render(batch);
         }
-        Gdx.app.debug("GameScreen", "Total coins on screen: " + coinCount);
-        
-        // Рендеринг игрока поверх остальных объектов
-        Player player = physicsSystem.getPlayer();
-        if (player != null && player.isActive()) {
-            spriteRenderer.render(player);
-        }
-        
-        // Рендеринг UI
+        batch.end();
+
+        // Рисуем UI
         if (uiManager != null) {
             uiManager.render(physicsSystem.getPlayer());
         }
-        
-        spriteRenderer.getBatch().end();
     }
 
     @Override
@@ -151,6 +143,28 @@ public class GameScreen implements Screen {
         if (levelNumber == 2) musicPath = "assets/musics/level2.mp3";
         if (levelNumber == 3) musicPath = "assets/musics/level3.mp3";
         MusicManager.play(musicPath, true);
+
+        // Устанавливаем обработчик ввода
+        InputMultiplexer multiplexer = new InputMultiplexer();
+        multiplexer.addProcessor(uiManager.getStage());
+        multiplexer.addProcessor(new InputAdapter() {
+            @Override
+            public boolean keyDown(int keycode) {
+                if (inputHandler != null) {
+                    inputHandler.update(Gdx.graphics.getDeltaTime());
+                }
+                return true;
+            }
+
+            @Override
+            public boolean keyUp(int keycode) {
+                if (inputHandler != null) {
+                    inputHandler.update(Gdx.graphics.getDeltaTime());
+                }
+                return true;
+            }
+        });
+        Gdx.input.setInputProcessor(multiplexer);
     }
 
     @Override
@@ -170,8 +184,8 @@ public class GameScreen implements Screen {
 
     @Override
     public void dispose() {
-        if (background != null) {
-            background.dispose();
+        if (backgroundTexture != null) {
+            backgroundTexture.dispose();
         }
         if (shapeRenderer != null) {
             shapeRenderer.dispose();
@@ -195,5 +209,9 @@ public class GameScreen implements Screen {
         if (uiManager != null) {
             uiManager.updateCoinCount(coins);
         }
+    }
+
+    public SpriteManager getSpriteManager() {
+        return spriteManager;
     }
 }

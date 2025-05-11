@@ -45,13 +45,15 @@ public class InventoryWindow extends Window {
     public InventoryWindow(Skin skin, float x, float y, Inventory inventory,
                            Player player, EntitySystem entitySystem,
                            EntityFactory entityFactory, PhysicsSystem physicsSystem) {
-        super("Инвентарь", skin);
+        super("sudo ls /Кэш(Е)", skin);
         this.skin = skin;
         this.inventory = inventory;
         this.player = player;
         this.entitySystem = entitySystem;
         this.entityFactory = entityFactory;
         this.physicsSystem = physicsSystem;
+        
+        // Создаем таблицу для сетки инвентаря
         gridTable = new Table(skin);
         gridTable.defaults().size(80, 80).pad(5);
 
@@ -65,6 +67,7 @@ public class InventoryWindow extends Window {
             gridTable.row();
         }
 
+        // Добавляем таблицу в окно
         this.add(gridTable).expand().fill();
         this.setSize(300, 400);
         this.setVisible(false);
@@ -77,19 +80,13 @@ public class InventoryWindow extends Window {
         tooltipLabel.setWidth(200);
 
         tooltipTable = new Table(skin);
-
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(0, 0, 0, 0.7f);
-        pixmap.fill();
-        TextureRegionDrawable backgroundDrawable = new TextureRegionDrawable(new TextureRegion(new Texture(pixmap)));
-        pixmap.dispose();
-
-        tooltipTable.setBackground(backgroundDrawable);
-
+        tooltipTable.setBackground(skin.newDrawable("window-background"));
         tooltipTable.add(tooltipLabel).width(200).pad(10);
         tooltipTable.setVisible(false);
         this.addActor(tooltipTable);
 
+        // Обновляем отображение
+        refresh();
         updateSelection();
 
         // Обработка клавиш для навигации и выбора
@@ -124,6 +121,8 @@ public class InventoryWindow extends Window {
 
     /** Обновляет отображение предметов в ячейках */
     public void refresh() {
+        if (inventory == null) return;
+        
         List<Item> items = new ArrayList<>(inventory.getItems());
         int index = 0;
 
@@ -134,15 +133,19 @@ public class InventoryWindow extends Window {
 
                 if (index < items.size()) {
                     Item item = items.get(index);
-
-                    Texture texture = item.getTexture();
-                    if (texture != null) {
+                    if (item != null) {
                         Stack stack = new Stack();
+                        
+                        // Добавляем изображение предмета
+                        if (item.getTexture() != null) {
+                            Image img = new Image(new TextureRegionDrawable(new TextureRegion(item.getTexture())));
+                            img.setScaling(Scaling.fit);
+                            stack.add(img);
+                        } else {
+                            com.badlogic.gdx.Gdx.app.log("InventoryWindow", "Item " + item.getItemType() + " has no texture!");
+                        }
 
-                        Image img = new Image(new TextureRegionDrawable(new TextureRegion(texture)));
-                        img.setScaling(Scaling.fit);
-                        stack.add(img);
-
+                        // Добавляем количество предметов
                         if (item.getQuantity() > 1) {
                             Label.LabelStyle labelStyle = skin.get(Label.LabelStyle.class);
                             if (labelStyle == null) {
@@ -153,11 +156,11 @@ public class InventoryWindow extends Window {
                             Label qtyLabel = new Label(String.valueOf(item.getQuantity()), labelStyle);
                             qtyLabel.setColor(Color.WHITE);
                             qtyLabel.setFontScale(0.8f);
-                            qtyLabel.setAlignment(Align.center);
+                            qtyLabel.setAlignment(Align.bottomRight);
 
                             Table qtyTable = new Table();
                             qtyTable.setFillParent(true);
-                            qtyTable.top().right().pad(2);
+                            qtyTable.bottom().right().pad(2);
                             qtyTable.add(qtyLabel);
 
                             stack.add(qtyTable);
@@ -166,7 +169,6 @@ public class InventoryWindow extends Window {
                         cell.add(stack).size(64, 64);
                     }
                 }
-
                 index++;
             }
         }
@@ -290,6 +292,10 @@ public class InventoryWindow extends Window {
         return platforms.get(random.nextInt(platforms.size()));
     }
 
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
+        refresh();
+    }
 }
 
 

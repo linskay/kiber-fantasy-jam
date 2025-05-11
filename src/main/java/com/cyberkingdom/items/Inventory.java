@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.Gdx;
 
 public class Inventory {
     private List<Item> items;
@@ -36,18 +37,20 @@ public class Inventory {
     public boolean addItem(Item newItem) {
         for (Item item : items) {
             if (item.getItemType().equals(newItem.getItemType())) {
-                // Предполагаем, что предметы одного типа можно стекать
                 item.increaseQuantity(newItem.getQuantity());
+                Gdx.app.log("Inventory", "Stacked item: " + item.getItemType() + ", qty: " + item.getQuantity());
                 return true;
             }
         }
         if (items.size() < capacity) {
-            // Создаем копию предмета, чтобы отделить инвентарь от игрового объекта
             Item copy = new Item(newItem.getItemType(), newItem.getPosition(), newItem.getQuantity(), spriteManager);
+            copy.setTextureFromSpriteManager(spriteManager);
             items.add(copy);
+            Gdx.app.log("Inventory", "Added new item: " + copy.getItemType());
             return true;
         }
-        return false; // нет места
+        Gdx.app.log("Inventory", "Inventory full, cannot add: " + newItem.getItemType());
+        return false;
     }
 
     /** Получить предмет по индексу */

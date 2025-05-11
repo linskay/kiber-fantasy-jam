@@ -43,34 +43,28 @@ public class ItemPickupSystem {
 
                 if (playerCollision.collidesWith(itemCollision)) {
                     Gdx.app.log("ItemPickupSystem", "Collision detected with item: " + item.getItemType());
-                    // Добавляем предмет в инвентарь игрока
-                    if (player.getInventory() != null) {
-                        if (player.getInventory().addItem(item)) {
-                            Gdx.app.log("ItemPickupSystem", "Item added to inventory: " + item.getItemType());
-                            itemsToRemove.add(item);
-                            // Если это монета, удаляем платформу из списка
-                            if (item.getItemType().equals("COIN")) {
-                                // Находим платформу под монетой
-                                Rectangle itemBounds = item.getCollisionBounds();
-                                for (Platform platform : levelLoader.getPlatforms()) {
-                                    Rectangle platformRect = platform.getRectangle();
-                                    if (platformRect.x <= itemBounds.x && 
-                                        platformRect.x + platformRect.width >= itemBounds.x &&
-                                        Math.abs(platformRect.y + platformRect.height - itemBounds.y) < 20) {
-                                        levelLoader.removePlatformFromCoinsList(platformRect);
-                                        break;
-                                    }
-                                }
-                            }
-                            // Воспроизводим звук только если предмет не монетка
-                            if (!item.getItemType().equals("COIN") && itemPickupSound != null) {
-                                itemPickupSound.play();
-                            }
-                        } else {
-                            Gdx.app.log("ItemPickupSystem", "Failed to add item to inventory: " + item.getItemType());
+                    
+                    if (item.getItemType().equals("COIN")) {
+                        player.collectCoin();
+                        itemsToRemove.add(item);
+                        if (itemPickupSound != null) {
+                            itemPickupSound.play();
                         }
                     } else {
-                        Gdx.app.error("ItemPickupSystem", "Player inventory is null!");
+                        // Добавляем предмет в инвентарь игрока
+                        if (player.getInventory() != null) {
+                            if (player.getInventory().addItem(item)) {
+                                Gdx.app.log("ItemPickupSystem", "Item added to inventory: " + item.getItemType());
+                                itemsToRemove.add(item);
+                                if (itemPickupSound != null) {
+                                    itemPickupSound.play();
+                                }
+                            } else {
+                                Gdx.app.log("ItemPickupSystem", "Failed to add item to inventory: " + item.getItemType());
+                            }
+                        } else {
+                            Gdx.app.error("ItemPickupSystem", "Player inventory is null!");
+                        }
                     }
                 }
             }

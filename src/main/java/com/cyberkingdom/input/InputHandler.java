@@ -2,9 +2,10 @@ package com.cyberkingdom.input;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputProcessor;
 import com.cyberkingdom.entities.Player;
 
-public class InputHandler {
+public class InputHandler implements InputProcessor {
     private final Player player;
     private boolean jumpPressed = false;
     private boolean inventoryPressed = false;
@@ -22,11 +23,9 @@ public class InputHandler {
 
     public void handleJump() {
         if ((Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.W)) && !jumpPressed) {
-            Gdx.app.log("InputHandler", "Jump key pressed, canJump: " + player.canJump());
             if (player.canJump()) {
                 player.setVelocity(player.getVelocity().x, player.getJumpVelocity());
                 player.setJumping(true);
-                player.setOnGround(false);
                 player.useJump();
                 Gdx.app.log("InputHandler", "Jump initiated, jumps left: " + player.getJumpsLeft());
             }
@@ -48,17 +47,63 @@ public class InputHandler {
     }
 
     public void handleInventory() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.E) && !inventoryPressed) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
             inventoryVisible = !inventoryVisible;
-            inventoryPressed = true;
             Gdx.app.log("InputHandler", "Inventory visibility changed to: " + inventoryVisible);
-        } else if (!Gdx.input.isKeyPressed(Input.Keys.E)) {
-            inventoryPressed = false;
         }
     }
 
     public boolean isInventoryVisible() {
         return inventoryVisible;
+    }
+
+    @Override
+    public boolean keyDown(int keycode) {
+        if (keycode == Input.Keys.E) {
+            inventoryVisible = !inventoryVisible;
+            Gdx.app.log("InputHandler", "Inventory visibility changed to: " + inventoryVisible);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean keyUp(int keycode) {
+        return false;
+    }
+
+    @Override
+    public boolean keyTyped(char character) {
+        return false;
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchDragged(int screenX, int screenY, int pointer) {
+        return false;
+    }
+
+    @Override
+    public boolean mouseMoved(int screenX, int screenY) {
+        return false;
+    }
+
+    @Override
+    public boolean scrolled(float amountX, float amountY) {
+        return false;
     }
 
     public void dispose() {

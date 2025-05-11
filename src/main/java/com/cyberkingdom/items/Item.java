@@ -59,7 +59,7 @@ public class Item extends GameEntity implements Collidable {
     }
 
     public static final List<ItemData> ALL_ITEMS = Arrays.asList(
-        new ItemData(ITEM_COIN, "Монета", "Обычная монета", "Увеличивает счетчик монет"),
+        new ItemData(ITEM_COIN, "Дай.Токен", "Обычная монета", "Увеличивает счетчик монет"),
         new ItemData(ITEM_CRYPTO_COIN, "Криптомонета", "Цифровая валюта", "Увеличивает счетчик криптомонет"),
         new ItemData(ITEM_VPN_TOKEN, "VPN Токен", "Токен для VPN", "Дает временную защиту"),
         new ItemData(ITEM_USB_SCATTER, "USB Scatter", "USB устройство", "Увеличивает скорость"),

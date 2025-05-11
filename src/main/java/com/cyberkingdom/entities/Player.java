@@ -127,6 +127,7 @@ public class Player extends GameEntity implements Collidable {
         this.onGround = onGround;
         if (onGround) {
             jumpsLeft = 2; // Восстанавливаем прыжки при приземлении
+            isJumping = false;
         }
     }
     public boolean canJump() {
@@ -135,6 +136,8 @@ public class Player extends GameEntity implements Collidable {
     public void useJump() {
         if (jumpsLeft > 0) {
             jumpsLeft--;
+            isJumping = true;
+            onGround = false;
         }
     }
     public int getJumpsLeft() {
@@ -193,7 +196,14 @@ public class Player extends GameEntity implements Collidable {
         if (gameScreen != null) {
             gameScreen.updateCoinCount(coins);
         }
-        Gdx.app.debug("Player", "Collected coin, total: " + coins);
+        Gdx.app.log("Player", "Collected coin, total: " + coins);
+    }
+
+    public void collectItem(Item item) {
+        if (inventory != null) {
+            inventory.addItem(item);
+            Gdx.app.log("Player", "Collected item: " + item.getItemType());
+        }
     }
 
     public void render(SpriteBatch batch) {
@@ -238,5 +248,9 @@ public class Player extends GameEntity implements Collidable {
 
     public void setGameScreen(GameScreen gameScreen) {
         this.gameScreen = gameScreen;
+    }
+
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
     }
 }

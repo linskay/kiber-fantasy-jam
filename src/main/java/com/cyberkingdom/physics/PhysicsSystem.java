@@ -92,7 +92,6 @@ public class PhysicsSystem {
         boolean onGround = false;
         for (Rectangle platform : platforms) {
             if (checkCollision(player, platform)) {
-                Gdx.app.log("PhysicsSystem", "Collision detected with platform");
                 // Определяем направление столкновения
                 float overlapX = Math.min(
                     player.getCollisionBounds().x + player.getCollisionBounds().width - platform.x,
@@ -120,6 +119,7 @@ public class PhysicsSystem {
                         position.y = platform.y + platform.height;
                         velocity.y = 0;
                         onGround = true;
+                        player.setOnGround(true); // Сбрасываем прыжки при приземлении
                     }
                 }
             }
@@ -128,7 +128,6 @@ public class PhysicsSystem {
         // Обновляем позицию и скорость игрока
         player.setPosition(position.x, position.y);
         player.setVelocity(velocity.x, velocity.y);
-        player.setOnGround(onGround);
 
         // Если игрок на земле и не прыгает, сбрасываем вертикальную скорость
         if (onGround && !player.isJumping()) {

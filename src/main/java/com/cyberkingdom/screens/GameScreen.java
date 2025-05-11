@@ -30,18 +30,21 @@ import com.badlogic.gdx.Input;
 import com.cyberkingdom.gameengine.GameEngine;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.math.Vector2;
+import com.cyberkingdom.items.InventoryWindow;
+import com.cyberkingdom.items.Inventory;
 
 public class GameScreen implements Screen {
-    private final GameEngine engine;
-    private final EntitySystem entitySystem;
-    private final PhysicsSystem physicsSystem;
-    private final LevelLoader levelLoader;
-    private final UIManager uiManager;
-    private final SpriteRenderer spriteRenderer;
-    private final OrthographicCamera camera;
-    private final SpriteBatch batch;
+    private GameEngine engine;
+    private EntitySystem entitySystem;
+    private PhysicsSystem physicsSystem;
+    private LevelLoader levelLoader;
+    private UIManager uiManager;
+    private SpriteRenderer spriteRenderer;
+    private OrthographicCamera camera;
+    private SpriteBatch batch;
     private InputHandler inputHandler;
-    private final ExtendViewport viewport;
+    private ExtendViewport viewport;
     private BitmapFont font;
     private static final float LEVEL_WIDTH = 1200f;
     private static final float LEVEL_HEIGHT = 800f;
@@ -53,6 +56,7 @@ public class GameScreen implements Screen {
     private BossSpawnManager bossSpawnManager;
     private SpriteManager spriteManager;
     private Player player;
+    private EntityFactory entityFactory;
 
     public GameScreen(GameEngine engine, EntitySystem entitySystem, PhysicsSystem physicsSystem, 
                      LevelLoader levelLoader, UIManager uiManager, SpriteRenderer spriteRenderer) {
@@ -88,13 +92,13 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Обновляем камеру
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
-
         // Очищаем экран
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // Обновляем камеру
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
 
         // Рисуем фон
         batch.begin();
@@ -115,10 +119,22 @@ public class GameScreen implements Screen {
             bossSpawnManager.update();
         }
 
-        // Рисуем все сущности
+        // Рисуем все сущности в правильном порядке
         batch.begin();
+        // Сначала рисуем платформы (кроме земли)
         for (GameEntity entity : entitySystem.getEntities()) {
-            entity.render(batch);
+            if (entity instanceof Platform) {
+                Platform platform = (Platform) entity;
+                if (!platform.isGround()) {
+                    platform.render(batch);
+                }
+            }
+        }
+        // Затем рисуем все остальные сущности (игрок, предметы, монеты и т.д.)
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (!(entity instanceof Platform)) {
+                entity.render(batch);
+            }
         }
         batch.end();
 
@@ -135,36 +151,46 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        int levelNumber = 1;
-        if (levelLoader != null) {
-            levelNumber = levelLoader.getLevelNumber();
-        }
-        String musicPath = "assets/musics/level1.mp3";
-        if (levelNumber == 2) musicPath = "assets/musics/level2.mp3";
-        if (levelNumber == 3) musicPath = "assets/musics/level3.mp3";
-        MusicManager.play(musicPath, true);
+        // Инициализация камеры и viewport
+        camera = new OrthographicCamera();
+        viewport = new ExtendViewport(LEVEL_WIDTH, LEVEL_HEIGHT, camera);
+        viewport.apply();
+        camera.position.set(LEVEL_WIDTH / 2, LEVEL_HEIGHT / 2, 0);
+        camera.update();
 
-        // Устанавливаем обработчик ввода
-        InputMultiplexer multiplexer = new InputMultiplexer();
-        multiplexer.addProcessor(uiManager.getStage());
-        multiplexer.addProcessor(new InputAdapter() {
-            @Override
-            public boolean keyDown(int keycode) {
-                if (inputHandler != null) {
-                    inputHandler.update(Gdx.graphics.getDeltaTime());
-                }
-                return true;
-            }
-
-            @Override
-            public boolean keyUp(int keycode) {
-                if (inputHandler != null) {
-                    inputHandler.update(Gdx.graphics.getDeltaTime());
-                }
-                return true;
-            }
-        });
-        Gdx.input.setInputProcessor(multiplexer);
+        // Инициализация систем
+        entitySystem = new EntitySystem();
+        physicsSystem = new PhysicsSystem(entitySystem);
+        spriteManager = new SpriteManager();
+        spriteManager.loadTextures();
+        spriteManager.setupSpriteRegions();
+        spriteRenderer = new SpriteRenderer(batch);
+        entityFactory = new EntityFactory(spriteManager, physicsSystem);
+        
+        // Создаем игрока
+        player = (Player) entityFactory.createPlayer(new Vector2(100, 200), this);
+        physicsSystem.setPlayer(player);
+        entitySystem.addEntity(player);
+        
+        // Генерируем уровень
+        levelLoader = new LevelLoader(
+            spriteManager,
+            entitySystem,
+            physicsSystem,
+            entityFactory,
+            1
+        );
+        
+        // Инициализация системы сбора предметов
+        itemPickupSystem = new ItemPickupSystem(entitySystem, player, levelLoader);
+        
+        // Инициализация менеджера босса
+        bossSpawnManager = new BossSpawnManager(entitySystem, entityFactory, physicsSystem, player);
+        
+        // Настройка обработчика ввода
+        InputMultiplexer inputMultiplexer = new InputMultiplexer();
+        inputMultiplexer.addProcessor(physicsSystem.getInputHandler());
+        Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
     @Override

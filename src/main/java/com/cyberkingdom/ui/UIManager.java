@@ -104,6 +104,13 @@ public class UIManager {
         windowStyle.background = skin.newDrawable("window-background");
         skin.add("default", windowStyle);
 
+        // Создаем белую текстуру для подсказок и других элементов
+        Pixmap whitePixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        whitePixmap.setColor(Color.WHITE);
+        whitePixmap.fill();
+        skin.add("white", new Texture(whitePixmap));
+        whitePixmap.dispose();
+
         // Button
         Pixmap btnPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         btnPixmap.setColor(0.2f, 0.2f, 0.2f, 1f);
@@ -165,14 +172,22 @@ public class UIManager {
         font.draw(uiBatch, "sudo ls /Кэш(Е)", 90, 45);
         uiBatch.end();
 
-        // Рисуем инвентарь, если он видим
-        if (inputHandler != null && inputHandler.isInventoryVisible()) {
-            Gdx.app.log("UIManager", "Rendering inventory window");
-            inventoryWindow.setVisible(true);
-            stage.act(Gdx.graphics.getDeltaTime());
-            stage.draw();
-        } else {
-            inventoryWindow.setVisible(false);
+        // Обновляем и рисуем инвентарь
+        if (inventoryWindow != null) {
+            if (inputHandler != null && inputHandler.isInventoryVisible()) {
+                inventoryWindow.setInventory(player.getInventory());
+                inventoryWindow.setVisible(true);
+                inventoryWindow.refresh();
+                stage.act(Gdx.graphics.getDeltaTime());
+                stage.draw();
+            } else {
+                inventoryWindow.setVisible(false);
+            }
+        }
+
+        // Обновляем обработку ввода
+        if (inputHandler != null) {
+            inputHandler.update(Gdx.graphics.getDeltaTime());
         }
     }
 
@@ -203,5 +218,16 @@ public class UIManager {
 
     public Stage getStage() {
         return stage;
+    }
+
+    public Skin getSkin() {
+        return skin;
+    }
+
+    public void setInventoryWindow(InventoryWindow inventoryWindow) {
+        this.inventoryWindow = inventoryWindow;
+        if (stage != null && inventoryWindow != null) {
+            stage.addActor(inventoryWindow);
+        }
     }
 }

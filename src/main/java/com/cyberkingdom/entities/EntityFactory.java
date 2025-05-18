@@ -10,6 +10,7 @@ import com.cyberkingdom.screens.GameScreen;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.entities.EntitySystem;
 import com.cyberkingdom.physics.PhysicsSystem;
+import com.cyberkingdom.entities.Projectile;
 
 import java.util.Random;
 
@@ -146,6 +147,19 @@ public class EntityFactory {
             default:
                 return "Описание отсутствует";
         }
+    }
+
+    public Projectile createProjectile(float x, float y, float vx, float vy, float damage) {
+        TextureRegion[] frames = spriteManager.getFrames("WITCH_VPN");
+        TextureRegion texture = (frames != null && frames.length > 0) ? frames[0] : null;
+
+        if (texture == null) {
+             Gdx.app.error("EntityFactory", "Failed to get texture for projectile.");
+             return null;
+        }
+
+        Projectile projectile = new Projectile(x, y, vx, vy, damage, spriteManager);
+        return projectile;
     }
 }
 

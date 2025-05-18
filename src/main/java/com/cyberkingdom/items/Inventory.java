@@ -11,6 +11,7 @@ public class Inventory {
     private List<Item> items;
     private int maxSize;
     private SpriteManager spriteManager;
+    private boolean isVisible = false;
 
     public Inventory(SpriteManager spriteManager) {
         this.items = new ArrayList<>();
@@ -73,6 +74,15 @@ public class Inventory {
             }
             items.clear();
         }
+    }
+
+    public void toggle() {
+        isVisible = !isVisible;
+        Gdx.app.log("Inventory", "Inventory visibility toggled to: " + isVisible);
+    }
+
+    public boolean isVisible() {
+        return isVisible;
     }
 }
 

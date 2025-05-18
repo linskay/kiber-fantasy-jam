@@ -438,9 +438,11 @@ public class LevelLoader {
     private void spawnWitchVPN(EntitySystem entitySystem, AssetManager assetManager) {
         Gdx.app.log("LevelLoader", "Starting spawnWitchVPN");
         if (player != null) {
-            float x = player.getPosition().x + 300; // Спавним босса справа от игрока
-            float y = player.getPosition().y;
-            WitchVPN boss = new WitchVPN(x, y, physicsSystem, spriteManager);
+            // Спавним босса дальше справа и выше от игрока
+            float x = player.getPosition().x + 400; // Увеличиваем расстояние по X еще больше
+            float y = player.getPosition().y + 200; // Добавляем отступ по Y
+            Vector2 position = new Vector2(x, y);
+            WitchVPN boss = new WitchVPN(position.x, position.y, physicsSystem, spriteManager);
             boss.setTarget(player);
             entitySystem.addEntity(boss);
             witchVPN = boss;

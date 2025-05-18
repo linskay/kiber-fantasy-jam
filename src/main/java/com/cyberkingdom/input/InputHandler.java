@@ -24,10 +24,8 @@ public class InputHandler implements InputProcessor {
     public void handleJump() {
         if ((Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.W)) && !jumpPressed) {
             if (player.canJump()) {
-                player.setVelocity(player.getVelocity().x, player.getJumpVelocity());
-                player.setJumping(true);
-                player.useJump();
-                Gdx.app.log("InputHandler", "Jump initiated, jumps left: " + player.getJumpsLeft());
+                player.jump();
+                Gdx.app.log("InputHandler", "Jump initiated via player.jump(), jumps left: " + player.getJumpsLeft());
             }
             jumpPressed = true;
         } else if (!Gdx.input.isKeyPressed(Input.Keys.SPACE) && !Gdx.input.isKeyPressed(Input.Keys.W)) {

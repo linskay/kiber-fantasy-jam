@@ -8,6 +8,7 @@ import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.audio.Sound;
 
 import java.util.List;
 import java.util.Random;
@@ -37,8 +38,15 @@ public class WitchVPN extends Boss {
     private EntityFactory entityFactory;
     private float moveSpeed = 150f; // Уменьшаем скорость движения
     private float teleportCooldown = 3f;
-    private int hitsToDefeat = 3; // Количество прыжков для победы
-    private int currentHits = 0; // Текущее количество попаданий
+    private int hitsToDefeat = 10; // Количество ударов для победы
+    private int currentHits = 0; // Текущее количество ударов
+    private float initialDelayTimer = 1.0f; // Задержка в 1 секунду перед началом действий
+    private Sound welcomeSound; // Звук появления
+    private float totalActiveTime = 0f; // Общее время активности
+    private float requiredActiveTime = 10f; // Требуемое время для победы (3 секунды)
+    private float health = 100f; // Здоровье Ведьмы VPN
+    private Sound attackSound; // Звук атаки
+    private Sound deathSound; // Звук смерти
 
     public WitchVPN(float x, float y, PhysicsSystem physicsSystem, SpriteManager spriteManager) {
         super("WITCH_VPN", x, y, spriteManager);
@@ -53,6 +61,7 @@ public class WitchVPN extends Boss {
         this.projectiles = new ArrayList<>();
         this.targetPosition = new Vector2();
         this.isMoving = true;
+        this.requiredActiveTime = 10f; // Инициализация, которая станет неактуальной
 
         Gdx.app.log("WitchVPN", "Initialized with moveSpeed: " + moveSpeed);
 
@@ -68,6 +77,30 @@ public class WitchVPN extends Boss {
         } else {
             Gdx.app.error("WitchVPN", "No platforms available for initialization");
         }
+
+        // Загрузка звука появления
+        try {
+            welcomeSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/vedma_welcome.mp3"));
+            Gdx.app.log("WitchVPN", "Welcome sound loaded.");
+        } catch (Exception e) {
+            Gdx.app.error("WitchVPN", "Failed to load welcome sound: " + e.getMessage());
+        }
+
+        // Загрузка звука атаки
+        try {
+            attackSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/vedma_attac.mp3"));
+            Gdx.app.log("WitchVPN", "Attack sound loaded.");
+        } catch (Exception e) {
+            Gdx.app.error("WitchVPN", "Failed to load attack sound: " + e.getMessage());
+        }
+
+        // Загрузка звука смерти
+        try {
+            deathSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/vedma_death.mp3"));
+            Gdx.app.log("WitchVPN", "Death sound loaded.");
+        } catch (Exception e) {
+            Gdx.app.error("WitchVPN", "Failed to load death sound: " + e.getMessage());
+        }
     }
 
     @Override
@@ -76,12 +109,29 @@ public class WitchVPN extends Boss {
         this.target = target;
         Gdx.app.log("WitchVPN", "Target set to player at position: " + 
             (target != null ? target.getPosition().x + "," + target.getPosition().y : "null"));
+        
+        // Воспроизводим звук при установке цели (при появлении Ведьмы)
+        if (welcomeSound != null) {
+            welcomeSound.play();
+            Gdx.app.log("WitchVPN", "Playing welcome sound.");
+        }
     }
 
     @Override
     public void update(float deltaTime) {
         super.update(deltaTime);
         
+        // Обновляем таймер начальной задержки
+        if (initialDelayTimer > 0) {
+            initialDelayTimer -= deltaTime;
+            Gdx.app.log("WitchVPN", "Initial delay timer: " + initialDelayTimer);
+            if (initialDelayTimer <= 0) {
+                Gdx.app.log("WitchVPN", "Initial delay finished. Witch VPN is now active.");
+                // Возможно, здесь можно добавить какой-то визуальный или звуковой сигнал активации
+            }
+            return; // Не выполняем остальную логику, пока есть задержка
+        }
+
         // Проверяем столкновение с игроком
         if (target != null && isVisible) {
             handlePlayerCollision(target);
@@ -131,6 +181,16 @@ public class WitchVPN extends Boss {
 
             // Обновляем движение
             updateMovement();
+
+            // Обновляем общее время активности
+            totalActiveTime += deltaTime;
+            Gdx.app.log("WitchVPN", "Total active time: " + totalActiveTime);
+
+            // Проверяем, прошло ли достаточно времени для победы
+            if (totalActiveTime >= requiredActiveTime) {
+                Gdx.app.log("WitchVPN", "Witch VPN has been active for " + requiredActiveTime + " seconds. Victory!");
+                setActive(false); // Победа
+            }
         } else {
             // Если босс невидим, проверяем, нужно ли сделать его видимым
             if (visibilityTimer >= visibilityDuration) {
@@ -164,7 +224,23 @@ public class WitchVPN extends Boss {
             position.add(moveX, moveY);
             
             Gdx.app.log("WitchVPN", String.format(
-                "Moving - Delta: (%.2f, %.2f), New position: (%.2f, %.2f), MoveSpeed: %.2f",
+                "Moving towards player - Delta: (%.2f, %.2f), New position: (%.2f, %.2f), MoveSpeed: %.2f",
+                moveX, moveY, position.x, position.y, moveSpeed
+            ));
+
+            // Обновляем коллизию после движения
+            if (collision != null) {
+                collision.update(position);
+            }
+        } else if (distanceToPlayer < minDistanceToPlayer) {
+             // Если игрок слишком близко, отходим от него
+            float moveX = -direction.x * moveSpeed * Gdx.graphics.getDeltaTime(); // Движемся в обратном направлении
+            float moveY = -direction.y * moveSpeed * Gdx.graphics.getDeltaTime();
+
+            position.add(moveX, moveY);
+
+            Gdx.app.log("WitchVPN", String.format(
+                "Moving away from player - Delta: (%.2f, %.2f), New position: (%.2f, %.2f), MoveSpeed: %.2f",
                 moveX, moveY, position.x, position.y, moveSpeed
             ));
 
@@ -173,7 +249,7 @@ public class WitchVPN extends Boss {
                 collision.update(position);
             }
         } else {
-            Gdx.app.log("WitchVPN", "Too close to player, not moving");
+            Gdx.app.log("WitchVPN", "Maintaining distance from player");
         }
     }
 
@@ -266,6 +342,12 @@ public class WitchVPN extends Boss {
         );
         projectiles.add(projectile);
         
+        // Воспроизводим звук атаки
+        if (attackSound != null) {
+            attackSound.play();
+            Gdx.app.log("WitchVPN", "Playing attack sound.");
+        }
+        
         timeSinceLastAttack = 0f;
     }
 
@@ -309,110 +391,63 @@ public class WitchVPN extends Boss {
             projectile.dispose();
         }
         projectiles.clear();
+        try {
+            if (welcomeSound != null) {
+                welcomeSound.dispose();
+            }
+        } catch (Exception e) {
+            Gdx.app.error("WitchVPN", "Error disposing resources", e);
+        }
     }
 
     private void handlePlayerCollision(Player player) {
         if (player != null && collision != null && player.getCollisionComponent() != null) {
             if (collision.collidesWith(player.getCollisionComponent())) {
-                // Проверяем, что игрок находится выше ведьмы
-                if (player.getPosition().y > position.y + collision.getBounds().height / 2) {
-                    // Игрок прыгнул на ведьму
-                    currentHits++;
-                    Gdx.app.log("WitchVPN", "Player hit witch from above! Hits: " + currentHits + "/" + hitsToDefeat);
-                    
-                    // Отбрасываем игрока на случайную платформу
-                    teleportPlayerToRandomPlatform(player);
-                    
+                // Проверяем, прыгает ли игрок на Ведьму сверху
+                // Проверяем, что игрок движется вниз (velocity.y < 0) и находится выше центра Ведьмы
+                if (player.getVelocity().y < 0 && player.getPosition().y > position.y + collision.getBounds().height / 2) {
+                    // Игрок прыгнул на Ведьму
+                    currentHits++; // Увеличиваем счетчик прыжков
+                    Gdx.app.log("WitchVPN", "WitchVPN took a jump hit! Current hits: " + currentHits + "/" + hitsToDefeat);
+
+                    // Отбрасываем игрока вверх после успешного прыжка на босса
+                    player.getVelocity().y = 400f; // Можно настроить силу отскока
+
+                    // Проверяем условие победы по прыжкам
                     if (currentHits >= hitsToDefeat) {
-                        // Ведьма побеждена
-                        Gdx.app.log("WitchVPN", "Witch defeated!");
-                        setActive(false);
+                         Gdx.app.log("WitchVPN", "WitchVPN defeated after " + currentHits + " jump hits!");
+                        // Воспроизводим звук смерти
+                        if (deathSound != null) {
+                            deathSound.play();
+                            Gdx.app.log("WitchVPN", "Playing death sound.");
+                        }
+                        setActive(false); // Ведьма побеждена
                     }
                 } else {
-                    // Игрок получил урон от ведьмы
-                    player.takeDamage(15f);
-                    // Отбрасываем игрока вверх и в сторону от ведьмы
+                    // Если игрок столкнулся с Ведьмой, но не прыгал на нее сверху, игрок получает урон
+                    player.takeDamage(5f); // Уменьшаем урон
+                    Gdx.app.log("WitchVPN", "Player took damage from WitchVPN. Player health: " + player.getHealth());
+                    // Отбрасываем игрока в сторону от ведьмы
                     Vector2 knockbackDirection = new Vector2(player.getPosition()).sub(position).nor();
-                    player.getVelocity().set(
+                     player.getVelocity().set(
                         knockbackDirection.x * 300f, // Горизонтальная составляющая отбрасывания
-                        400f // Вертикальная составляющая отбрасывания
-                    );
+                        player.getVelocity().y // Не меняем вертикальную скорость при горизонтальном отбрасывании
+                     );
                     Gdx.app.log("WitchVPN", "Player knocked back with velocity: " + player.getVelocity());
                 }
             }
         }
     }
 
-    private void teleportPlayerToRandomPlatform(Player player) {
-        List<Rectangle> platforms = physicsSystem.getPlatforms();
-        if (!platforms.isEmpty()) {
-            // Выбираем случайную платформу
-            int randomIndex = random.nextInt(platforms.size());
-            Rectangle targetPlatform = platforms.get(randomIndex);
-            
-            // Вычисляем позицию для телепортации (над платформой)
-            float teleportX = targetPlatform.x + targetPlatform.width / 2;
-            float teleportY = targetPlatform.y + targetPlatform.height + 50; // 50 пикселей над платформой
-            
-            // Телепортируем игрока
-            player.getPosition().set(teleportX, teleportY);
-            
-            // Сбрасываем скорость игрока
-            player.getVelocity().set(0, 0);
-            
-            Gdx.app.log("WitchVPN", "Player teleported to platform at: " + teleportX + ", " + teleportY);
-        }
+    public void takeDamage(float damage) {
+        // Этот метод теперь используется для урона НЕ от прыжков (например, от будущих атак игрока)
+        // Он уменьшает здоровье, но не влияет на счетчик currentHits, который теперь только для прыжков
+        health -= damage;
+        Gdx.app.log("WitchVPN", "WitchVPN took damage: " + damage + ", current health: " + health);
+        // Условие победы по здоровью убрано, победа только по прыжкам
     }
 
-    // Внутренний класс для снарядов
-    private static class Projectile {
-        private Vector2 position;
-        private Vector2 velocity;
-        private float damage;
-        private CollisionComponent collision;
-        private TextureRegion texture;
-
-        public Projectile(float x, float y, float vx, float vy, float damage, SpriteManager spriteManager) {
-            this.position = new Vector2(x, y);
-            this.velocity = new Vector2(vx, vy);
-            this.damage = damage;
-            this.collision = new CollisionComponent(16, 16);
-            this.collision.update(position);
-            
-            // Получаем текстуру снаряда
-            TextureRegion[] frames = spriteManager.getFrames("WITCH_VPN");
-            if (frames != null && frames.length > 0) {
-                this.texture = frames[0];
-            }
-        }
-
-        public void update(float deltaTime) {
-            position.add(velocity.x * deltaTime, velocity.y * deltaTime);
-            collision.update(position);
-        }
-
-        public void render(SpriteBatch batch) {
-            if (texture != null) {
-                batch.draw(texture, position.x - 8, position.y - 8, 16, 16);
-            }
-        }
-
-        public Rectangle getCollisionBounds() {
-            return collision.getBounds();
-        }
-
-        public float getDamage() {
-            return damage;
-        }
-
-        public boolean isOutOfBounds() {
-            return position.x < 0 || position.x > Gdx.graphics.getWidth() ||
-                   position.y < 0 || position.y > Gdx.graphics.getHeight();
-        }
-
-        public void dispose() {
-            collision = null;
-            texture = null;
-        }
+    public float getHealth() {
+        return health;
     }
 } 

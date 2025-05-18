@@ -10,12 +10,16 @@ import com.badlogic.gdx.math.Vector2;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.entities.EntitySystem;
+import java.util.List;
+import java.util.ArrayList;
+import com.cyberkingdom.entities.EntityFactory;
+import com.cyberkingdom.entities.Projectile;
 
 public class DedinsaidBoss extends GameEntity implements Collidable {
     private static final float MOVE_SPEED = 150f;
-    private static final float ATTACK_RANGE = 100f;
+    private static final float ATTACK_RANGE = 300f;
     private static final float ATTACK_DAMAGE = 20f;
-    private static final float ATTACK_COOLDOWN = 1.5f;
+    private static final float ATTACK_COOLDOWN = 1.0f;
     private static final float HIT_COOLDOWN = 0.5f;
     private static final float BOSS_SIZE = 64f;
     private static final float GRAVITY = -1000f;
@@ -40,6 +44,8 @@ public class DedinsaidBoss extends GameEntity implements Collidable {
     private boolean onGround = false;
     private EntitySystem entitySystem;
     private boolean isActive = true;
+    private List<Projectile> projectiles; // Список снарядов Дединсайда
+    private EntityFactory entityFactory; // Для создания снарядов
 
     public DedinsaidBoss(Vector2 position, SpriteManager spriteManager, EntitySystem entitySystem) {
         super("DedinsaidBoss", spriteManager);
@@ -53,6 +59,13 @@ public class DedinsaidBoss extends GameEntity implements Collidable {
         this.isAttacking = false;
         this.isDefeated = false;
         this.entitySystem = entitySystem;
+        this.projectiles = new ArrayList<>(); // Инициализируем список снарядов
+        // Получаем EntityFactory из EntitySystem
+        if (entitySystem != null && entitySystem.getFactory() != null) {
+            this.entityFactory = entitySystem.getFactory();
+        } else {
+            Gdx.app.error("DedinsaidBoss", "EntityFactory is null! Cannot create projectiles.");
+        }
         
         loadAnimations(spriteManager);
         Gdx.app.log("DedinsaidBoss", "Initialized at position: " + position.x + ", " + position.y);
@@ -166,20 +179,64 @@ public class DedinsaidBoss extends GameEntity implements Collidable {
         position.y += velocity.y * deltaTime;
         collision.update(position);
         bounds.setPosition(position.x, position.y);
+
+        // Обновляем снаряды
+        updateProjectiles(deltaTime);
     }
 
     private void attack() {
-        if (target != null && !isDefeated) {
+        if (target != null && !isDefeated && entityFactory != null) {
             isAttacking = true;
             attackCooldown = ATTACK_COOLDOWN;
             
-            // Проверка попадания по игроку
-            if (bounds.overlaps(target.getCollisionBounds())) {
-                target.takeDamage(ATTACK_DAMAGE);
-            }
+            // Создаем снаряд, направленный в игрока
+            Vector2 direction = new Vector2(target.getPosition()).sub(position).nor();
+            // Создаем снаряд через EntityFactory
+            Projectile projectile = entityFactory.createProjectile(
+                position.x + BOSS_SIZE / 2, // Центр босса
+                position.y + BOSS_SIZE / 2,
+                direction.x * 300f, // Скорость снаряда (можно настроить)
+                direction.y * 300f, // Скорость снаряда
+                ATTACK_DAMAGE // Урон снаряда
+            );
             
-            // Сброс состояния атаки
-            isAttacking = false;
+            if (projectile != null) {
+                projectiles.add(projectile);
+                entitySystem.addEntity(projectile); // Добавляем снаряд в EntitySystem
+                 Gdx.app.log("DedinsaidBoss", "Created and added projectile to EntitySystem");
+            } else {
+                 Gdx.app.error("DedinsaidBoss", "Failed to create projectile.");
+            }
+
+            // Сброс состояния атаки (если анимация атаки короткая)
+            // isAttacking = false; // Возможно, нужно сбрасывать после анимации
+             Gdx.app.log("DedinsaidBoss", "Attacking! Created projectile.");
+
+        }
+    }
+
+    private void updateProjectiles(float deltaTime) {
+        // Проходим в обратном порядке, чтобы безопасно удалять снаряды
+        for (int i = projectiles.size() - 1; i >= 0; i--) {
+            Projectile projectile = projectiles.get(i);
+            projectile.update(deltaTime);
+
+            // Проверяем столкновение с игроком
+            if (target != null && projectile.getCollisionBounds().overlaps(target.getCollisionBounds())) {
+                target.takeDamage(projectile.getDamage());
+                 Gdx.app.log("DedinsaidBoss", "Projectile hit player! Player health: " + target.getHealth());
+                projectiles.remove(i);
+                entitySystem.removeEntity(projectile); // Удаляем снаряд из EntitySystem
+                 Gdx.app.log("DedinsaidBoss", "Removed projectile after hitting player.");
+                continue; // Переходим к следующему снаряду
+            }
+
+            // Удаляем снаряды, которые вышли за пределы экрана
+            if (projectile.isOutOfBounds()) {
+                projectiles.remove(i);
+                entitySystem.removeEntity(projectile); // Удаляем снаряд из EntitySystem
+                 Gdx.app.log("DedinsaidBoss", "Removed out-of-bounds projectile.");
+            }
         }
     }
 
@@ -205,6 +262,11 @@ public class DedinsaidBoss extends GameEntity implements Collidable {
     public void render(SpriteBatch batch) {
         if (isDefeated) return;
 
+        // Рендерим снаряды
+        for (Projectile projectile : projectiles) {
+            projectile.render(batch);
+        }
+
         TextureRegion currentFrame = isAttacking ? 
             attackAnimation.getKeyFrame(stateTime, true) : 
             idleAnimation.getKeyFrame(stateTime, true);
@@ -221,6 +283,19 @@ public class DedinsaidBoss extends GameEntity implements Collidable {
         }
         // Добавляем логирование позиции босса при рендеринге
         Gdx.app.log("DedinsaidBoss", "Rendering at position: " + position.x + ", " + position.y);
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+
+        // Освобождаем ресурсы снарядов
+        if (projectiles != null) {
+            for (Projectile projectile : projectiles) {
+                projectile.dispose();
+            }
+            projectiles.clear();
+        }
     }
 
     @Override

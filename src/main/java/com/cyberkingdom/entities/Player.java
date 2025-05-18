@@ -16,6 +16,7 @@ import com.cyberkingdom.minigames.WifiKeyMinigame;
 import com.cyberkingdom.entities.EntitySystem;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.audio.Sound;
 
 public class Player extends GameEntity implements Collidable {
     private static final float MOVE_SPEED = 300f;
@@ -82,6 +83,9 @@ public class Player extends GameEntity implements Collidable {
     private boolean isInMinigame;
     private EntitySystem entitySystem;
     private Texture texture;
+    private Sound coinSound;
+    private Sound jumpSound;
+    private Sound inventorySound;
 
     public Player(Vector2 position, SpriteManager spriteManager) {
         super("Player", spriteManager);
@@ -94,6 +98,7 @@ public class Player extends GameEntity implements Collidable {
         this.wifiKeyMinigame = null;
         initializePlayer(position);
         loadAnimations();
+        loadSounds();
     }
 
     private void initializePlayer(Vector2 position) {
@@ -215,6 +220,29 @@ public class Player extends GameEntity implements Collidable {
         fallbackFrames.add(new TextureRegion(texture));
         animation.addAnimation(fallbackFrames, 0.1f);
         Gdx.app.log("Player", "Fallback texture created and added to animation");
+    }
+
+    private void loadSounds() {
+        try {
+            coinSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/coin.mp3"));
+            Gdx.app.log("Player", "Coin sound loaded.");
+        } catch (Exception e) {
+            Gdx.app.error("Player", "Failed to load coin sound: " + e.getMessage());
+        }
+
+        try {
+            jumpSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/gg_jump.mp3"));
+            Gdx.app.log("Player", "Jump sound loaded.");
+        } catch (Exception e) {
+            Gdx.app.error("Player", "Failed to load jump sound: " + e.getMessage());
+        }
+
+        try {
+            inventorySound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/inventory.mp3"));
+            Gdx.app.log("Player", "Inventory sound loaded.");
+        } catch (Exception e) {
+            Gdx.app.error("Player", "Failed to load inventory sound: " + e.getMessage());
+        }
     }
 
     @Override
@@ -371,6 +399,12 @@ public class Player extends GameEntity implements Collidable {
         if (gameScreen != null) {
             gameScreen.updateCoinCount(coins);
 
+            // Воспроизводим звук сбора монеты
+            if (coinSound != null) {
+                coinSound.play();
+                Gdx.app.log("Player", "Playing coin sound.");
+            }
+
             // Удаляем сущность монеты из EntitySystem после сбора
             EntitySystem es = getEntitySystem();
             if (es != null) {
@@ -429,6 +463,19 @@ public class Player extends GameEntity implements Collidable {
             animation.dispose();
             animation = null;
         }
+        // Освобождаем ресурсы звуков
+        if (coinSound != null) {
+            coinSound.dispose();
+            coinSound = null;
+        }
+        if (jumpSound != null) {
+            jumpSound.dispose();
+            jumpSound = null;
+        }
+        if (inventorySound != null) {
+            inventorySound.dispose();
+            inventorySound = null;
+        }
     }
 
     public void setGameScreen(GameScreen gameScreen) {
@@ -457,6 +504,12 @@ public class Player extends GameEntity implements Collidable {
             jumpsLeft--;
             isJumping = true;
             onGround = false;
+
+            // Воспроизводим звук прыжка
+            if (jumpSound != null) {
+                jumpSound.play();
+                Gdx.app.log("Player", "Playing jump sound.");
+            }
         }
     }
 
@@ -512,5 +565,16 @@ public class Player extends GameEntity implements Collidable {
 
     public EntitySystem getEntitySystem() {
         return gameScreen.getEntitySystem();
+    }
+
+    public void toggleInventory() {
+        if (inventory != null) {
+            inventory.toggle();
+            // Воспроизводим звук открытия инвентаря
+            if (inventorySound != null) {
+                inventorySound.play();
+                Gdx.app.log("Player", "Playing inventory sound.");
+            }
+        }
     }
 }

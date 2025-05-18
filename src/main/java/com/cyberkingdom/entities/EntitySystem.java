@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 public class EntitySystem {
     private List<GameEntity> entities;
     private int currentLevel = 1;
+    private EntityFactory entityFactory;
 
     public EntitySystem() {
         this.entities = new ArrayList<>();
@@ -93,5 +94,13 @@ public class EntitySystem {
 
     public void setLevelNumber(int level) {
         this.currentLevel = level;
+    }
+
+    public EntityFactory getFactory() {
+        return entityFactory;
+    }
+
+    public void setFactory(EntityFactory entityFactory) {
+        this.entityFactory = entityFactory;
     }
 }

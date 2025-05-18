@@ -15,9 +15,13 @@ import java.util.List;
 
 public class ItemPickupSystem {
     private final EntitySystem entitySystem;
-    private final Player player;
+    private Player player;
     private Sound itemPickupSound;
     private final LevelLoader levelLoader;
+
+    public void setPlayer(Player player) {
+        this.player = player;
+    }
 
     public ItemPickupSystem(EntitySystem entitySystem, Player player, LevelLoader levelLoader) {
         this.entitySystem = entitySystem;

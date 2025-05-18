@@ -50,9 +50,13 @@ public class GameScreen implements Screen {
     private SpriteManager spriteManager;
     private Player player;
     private EntityFactory entityFactory;
+    private int currentLevel = 1;
+    private boolean levelTransitionInitiated = false;
 
     public GameScreen(GameEngine gameEngine, EntitySystem entitySystem, PhysicsSystem physicsSystem,
-                     LevelLoader levelLoader, UIManager uiManager, SpriteRenderer spriteRenderer) {
+                     LevelLoader levelLoader, UIManager uiManager, SpriteRenderer spriteRenderer,
+                     ItemPickupSystem itemPickupSystem,
+                     BossSpawnManager bossSpawnManager) {
         try {
             Gdx.app.log("GameScreen", "Initializing GameScreen");
             
@@ -63,6 +67,8 @@ public class GameScreen implements Screen {
             this.uiManager = uiManager;
             this.spriteRenderer = spriteRenderer;
             this.batch = spriteRenderer.getBatch();
+            this.itemPickupSystem = itemPickupSystem;
+            this.bossSpawnManager = bossSpawnManager;
 
             // Инициализация ShapeRenderer
             this.shapeRenderer = new ShapeRenderer();
@@ -88,13 +94,9 @@ public class GameScreen implements Screen {
             Gdx.app.log("GameScreen", "GameScreen reference set in Player object");
             
             // Инициализация системы подбора предметов
-            itemPickupSystem = new ItemPickupSystem(entitySystem, player, levelLoader);
-            Gdx.app.log("GameScreen", "Item pickup system initialized");
+            // itemPickupSystem = new ItemPickupSystem(entitySystem, player, levelLoader); // Удаляем эту строку
+            // Gdx.app.log("GameScreen", "Item pickup system initialized");
             
-            // Инициализация менеджера спавна боссов
-            bossSpawnManager = new BossSpawnManager(entitySystem, levelLoader.getEntityFactory(), physicsSystem, player);
-            Gdx.app.log("GameScreen", "Boss spawn manager initialized");
-
             // Инициализация камеры и viewport
             camera = new OrthographicCamera();
             viewport = new ExtendViewport(LEVEL_WIDTH, LEVEL_HEIGHT, camera);
@@ -103,7 +105,7 @@ public class GameScreen implements Screen {
             camera.update();
             Gdx.app.log("GameScreen", "Camera and Viewport initialized in constructor");
 
-            // Фоновая текстура будет загружена позже через setBackgroundTexture
+            // Фоновая текстура будет установлена позже через setBackgroundTexture
             this.backgroundTexture = null; // Изначально null
             
             Gdx.app.log("GameScreen", "GameScreen initialized successfully");
@@ -115,22 +117,12 @@ public class GameScreen implements Screen {
     }
 
     // Метод для установки фоновой текстуры уровня
-    public void setBackgroundTexture(String texturePath) {
+    public void setBackgroundTexture(Texture texture) {
         if (backgroundTexture != null) {
             backgroundTexture.dispose(); // Освобождаем предыдущую текстуру, если она была
         }
-        try {
-            backgroundTexture = new Texture(Gdx.files.internal(texturePath));
-            Gdx.app.log("GameScreen", "Background texture loaded successfully from path: " + texturePath);
-        } catch (Exception e) {
-            Gdx.app.error("GameScreen", "Failed to load background texture from path: " + texturePath, e);
-            // Создаем пустую текстуру как заглушку при ошибке загрузки
-            Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-            pixmap.setColor(Color.BLACK);
-            pixmap.fill();
-            backgroundTexture = new Texture(pixmap);
-            pixmap.dispose();
-        }
+        this.backgroundTexture = texture; // Принимаем уже загруженную текстуру
+        Gdx.app.log("GameScreen", "Background texture set.");
     }
 
     @Override
@@ -218,6 +210,57 @@ public class GameScreen implements Screen {
         physicsSystem.update(delta);
         entitySystem.update(delta);
         
+        // Проверяем коллизии с землей и платформами
+        for (GameEntity entity : entitySystem.getEntities()) {
+            if (entity instanceof Platform) {
+                Platform platform = (Platform) entity;
+                if (platform.isGround()) {
+                    // Если игрок падает ниже земли, останавливаем его
+                    if (player.getPosition().y < platform.getPosition().y + platform.getHeight()) {
+                        player.getPosition().y = platform.getPosition().y + platform.getHeight();
+                        player.setVelocity(player.getVelocity().x, 0);
+                        player.setOnGround(true);
+                    }
+                } else {
+                    // Проверяем коллизии с платформами
+                    if (player.getCollisionBounds().overlaps(platform.getBounds())) {
+                        // Если игрок падает на платформу сверху
+                        if (player.getVelocity().y < 0 && 
+                            player.getPosition().y > platform.getPosition().y + platform.getHeight() - 10) {
+                            player.getPosition().y = platform.getPosition().y + platform.getHeight();
+                            player.setVelocity(player.getVelocity().x, 0);
+                            player.setOnGround(true);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Проверяем состояние Ведьмы VPN только на уровне 1 и если переход еще не начат
+        ///*
+        if (currentLevel == 1 && !levelTransitionInitiated) {
+            boolean witchDefeated = false; // По умолчанию считаем не побежденной
+            boolean witchFound = false; // Флаг для проверки наличия Ведьмы в системе
+            for (GameEntity entity : entitySystem.getEntities()) {
+                if (entity instanceof WitchVPN) {
+                    witchFound = true;
+                    if (!entity.isActive()) {
+                        witchDefeated = true;
+                    }
+                    break; // Нашли Ведьму, больше не ищем
+                }
+            }
+
+            // Переходим на следующий уровень, только если Ведьма найдена И побеждена
+            if (witchFound && witchDefeated) {
+                Gdx.app.log("GameScreen", "Witch VPN defeated! Initiating level 2 transition.");
+                levelTransitionInitiated = true;
+                // Запускаем переход на следующий уровень через GameEngine
+                gameEngine.loadNextLevel(currentLevel + 1);
+            }
+        }
+        //*/
+        
         // Обновляем систему сбора предметов
         if (itemPickupSystem != null) {
             itemPickupSystem.update();
@@ -253,37 +296,38 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        // Используем существующие системы вместо создания новых
-        if (entitySystem == null || physicsSystem == null || spriteRenderer == null || batch == null) {
-            Gdx.app.error("GameScreen", "Required systems or batch are null in show()!");
-            return;
-        }
-        
-        // Получаем игрока из physicsSystem
-        player = physicsSystem.getPlayer();
-        if (player == null) {
-             Gdx.app.error("GameScreen", "Player is null in show()!");
-             return;
-        }
-        
-        // Настройка обработчика ввода
-        InputMultiplexer inputMultiplexer = new InputMultiplexer();
-        if (physicsSystem.getInputHandler() != null) {
-             inputMultiplexer.addProcessor(physicsSystem.getInputHandler());
-             Gdx.app.log("GameScreen", "Input handler added to InputMultiplexer");
-        } else {
-             Gdx.app.error("GameScreen", "InputHandler is null in show()!");
-        }
+        Gdx.app.log("GameScreen", "GameScreen shown");
+        // Настройка обработчика ввода будет происходить в GameEngine при переходе на этот экран
+        // Удаляем логику, связанную с InputMultiplexer отсюда
+        /*
+        InputMultiplexer multiplexer = new InputMultiplexer();
         if (uiManager != null && uiManager.getStage() != null) {
-             inputMultiplexer.addProcessor(uiManager.getStage());
-             Gdx.app.log("GameScreen", "UI Stage added to InputMultiplexer");
+            multiplexer.addProcessor(uiManager.getStage());
+             Gdx.app.log("GameScreen", "Added UIManager Stage to InputMultiplexer");
         } else {
-            Gdx.app.error("GameScreen", "UIManager or UI Stage is null, cannot add to InputMultiplexer");
+             Gdx.app.error("GameScreen", "UIManager or Stage is null, cannot add to InputMultiplexer");
         }
 
-        Gdx.input.setInputProcessor(inputMultiplexer);
+        // Добавляем InputHandler, если он не null
+        if (inputHandler != null) {
+            multiplexer.addProcessor(inputHandler);
+            Gdx.app.log("GameScreen", "Added InputHandler to InputMultiplexer");
+        } else {
+            Gdx.app.error("GameScreen", "InputHandler is null, cannot add to InputMultiplexer");
+        }
+
+        Gdx.input.setInputProcessor(multiplexer);
+        Gdx.app.log("GameScreen", "Input processor set.");
+        */
         
-        Gdx.app.log("GameScreen", "Show completed successfully");
+        // Запускаем музыку уровня, если она установлена
+        if (levelMusic != null) {
+            levelMusic.setLooping(true);
+            levelMusic.play();
+            Gdx.app.log("GameScreen", "Level music started.");
+        } else {
+            Gdx.app.log("GameScreen", "Level music is null, cannot play.");
+        }
     }
 
     @Override
@@ -331,6 +375,20 @@ public class GameScreen implements Screen {
         Gdx.app.log("GameScreen", "GameScreen disposed");
     }
 
+    // Метод для установки музыки уровня
+    public void setLevelMusic(Music music) {
+        if (levelMusic != null) {
+            levelMusic.stop(); // Останавливаем текущую музыку, если есть
+            levelMusic.dispose(); // Освобождаем предыдущую музыку
+        }
+        this.levelMusic = music;
+        Gdx.app.log("GameScreen", "Level music set in GameScreen.");
+    }
+
+    public void setPlayer(Player player) {
+        this.player = player;
+    }
+
     public void updateCoinCount(int coins) {
         // Обновляем счетчик монет в UI
         if (uiManager != null) {
@@ -339,7 +397,13 @@ public class GameScreen implements Screen {
     }
 
     public SpriteManager getSpriteManager() {
-        return spriteManager;
+        // Возвращаем SpriteManager, если он доступен (например, через GameEngine)
+        // В текущей структуре GameScreen напрямую не хранит SpriteManager, он есть в GameEngine.
+        // Возможно, стоит передавать SpriteManager в конструктор GameScreen или получать его из GameEngine.
+        // Пока возвращаем null, если нет прямого доступа.
+        // TODO: Добавить правильный доступ к SpriteManager
+        // return gameEngine.getSpriteManager(); // Если в GameEngine есть getSpriteManager()
+        return null; // Заглушка
     }
 
     public EntitySystem getEntitySystem() {
@@ -348,5 +412,13 @@ public class GameScreen implements Screen {
     
     public SpriteBatch getBatch() {
         return batch;
+    }
+
+    public LevelLoader getLevelLoader() {
+        return this.levelLoader;
+    }
+
+    public UIManager getUIManager() {
+        return this.uiManager;
     }
 }

@@ -49,7 +49,17 @@ public class AchievementsScreen implements Screen {
     }
 
     private void setupUI() {
-        stage.addActor(new Image(background));
+        if (background != null) {
+            stage.addActor(new Image(background));
+        } else {
+            // Создаем заглушку для фона
+            Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+            pixmap.setColor(Color.DARK_GRAY);
+            pixmap.fill();
+            Texture fallbackTexture = new Texture(pixmap);
+            pixmap.dispose();
+            stage.addActor(new Image(fallbackTexture));
+        }
         createBackButton();
     }
 
@@ -141,20 +151,24 @@ public class AchievementsScreen implements Screen {
     }
 
     private void drawCursor() {
-        stage.getBatch().begin();
-        stage.getBatch().setColor(1, 1, 1, 0.8f);
-        stage.getBatch().draw(
-                cursorTexture,
-                Gdx.input.getX() - 16,
-                Gdx.graphics.getHeight() - Gdx.input.getY() - 16,
-                32,
-                32
-        );
-        stage.getBatch().end();
+        if (cursorTexture != null) {
+            stage.getBatch().begin();
+            stage.getBatch().setColor(1, 1, 1, 0.8f);
+            stage.getBatch().draw(
+                    cursorTexture,
+                    Gdx.input.getX() - 16,
+                    Gdx.graphics.getHeight() - Gdx.input.getY() - 16,
+                    32,
+                    32
+            );
+            stage.getBatch().end();
+        }
     }
 
     private void goBack() {
-        selectSound.play(0.7f);
+        if (selectSound != null) {
+            selectSound.play(0.7f);
+        }
         engine.showMainMenu();
     }
 

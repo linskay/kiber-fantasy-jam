@@ -65,6 +65,12 @@ public class PhysicsSystem {
         platforms.clear();
     }
 
+    public void removeAllEntities() {
+        platforms.clear();
+        player = null;
+        inputHandler = null;
+    }
+
     public Player getPlayer() {
         return player;
     }

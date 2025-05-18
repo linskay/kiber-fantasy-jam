@@ -233,4 +233,11 @@ public class UIManager {
             stage.addActor(inventoryWindow);
         }
     }
+
+    public void setPlayer(Player player) {
+        this.player = player;
+        if (inventoryWindow != null) {
+            inventoryWindow.setInventory(player.getInventory());
+        }
+    }
 }

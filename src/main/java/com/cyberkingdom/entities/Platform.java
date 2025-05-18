@@ -60,6 +60,10 @@ public class Platform extends GameEntity {
         isGround = ground;
     }
 
+    public Rectangle getBounds() {
+        return rectangle;
+    }
+
     @Override
     public void update(float deltaTime) {
         super.update(deltaTime);

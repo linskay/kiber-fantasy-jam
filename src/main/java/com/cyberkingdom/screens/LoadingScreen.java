@@ -13,8 +13,17 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.cyberkingdom.gameengine.GameEngine;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.assets.AssetManager;
+import com.cyberkingdom.entities.EntitySystem;
+import com.cyberkingdom.physics.PhysicsSystem;
+import com.cyberkingdom.entities.EntityFactory;
+import com.cyberkingdom.rendering.SpriteRenderer;
+import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.audio.Music;
 
-public class LoadingScreen implements Screen {
+public class LoadingScreen implements Screen, Disposable {
     private final GameEngine game;
     private final SpriteBatch batch;
     private final Texture background;
@@ -30,6 +39,8 @@ public class LoadingScreen implements Screen {
     private static final float WORLD_HEIGHT = 800;
     private final BitmapFont font;
     private static final String LOADING_TEXT = "Олег сисадминит...";
+    private AssetManager assetManager;
+    private int nextLevelNumber;
 
     public LoadingScreen(GameEngine game) {
         this.game = game;
@@ -76,17 +87,79 @@ public class LoadingScreen implements Screen {
             
             this.stateTime = 0;
             this.loadingProgress = 0;
+            this.assetManager = new AssetManager();
         } catch (Exception e) {
             Gdx.app.error("LoadingScreen", "Error initializing loading screen", e);
             throw new RuntimeException("Failed to initialize loading screen", e);
         }
     }
 
+    public void setNextLevelNumber(int levelNumber) {
+        this.nextLevelNumber = levelNumber;
+        Gdx.app.log("LoadingScreen", "Next level number set to: " + nextLevelNumber);
+    }
+
+    @Override
+    public void show() {
+        Gdx.app.log("LoadingScreen", "Loading resources for level: " + nextLevelNumber);
+        
+        // Очищаем AssetManager от предыдущих ресурсов
+        if (assetManager != null) {
+            assetManager.clear();
+            Gdx.app.log("LoadingScreen", "AssetManager cleared.");
+        }
+
+        // Загрузка ресурсов уровня с помощью assetManager
+        // Например, assetManager.load("assets/levels/level" + nextLevelNumber + ".tmx", TiledMap.class);
+
+        // Загружаем фоновую текстуру уровня
+        String backgroundPath = "assets/background_level" + nextLevelNumber + ".png";
+        // Особый случай для уровня 2, если у него другой фон
+        if (nextLevelNumber == 2) {
+             backgroundPath = "assets/background_level_bonus.png";
+        }
+        assetManager.load(backgroundPath, Texture.class);
+        Gdx.app.log("LoadingScreen", "Loading background texture: " + backgroundPath);
+
+        // Загружаем музыку уровня
+        String musicPath = "assets/musics/level" + nextLevelNumber + ".mp3";
+        assetManager.load(musicPath, com.badlogic.gdx.audio.Music.class);
+        Gdx.app.log("LoadingScreen", "Loading level music: " + musicPath);
+        
+        // Добавляем загрузку основных спрайтов и музыки, которые могут быть нужны для GameScreen
+        // Эти ресурсы загружаются для каждого уровня на случай, если AssetManager был очищен
+        assetManager.load("assets/entities/player.png", Texture.class); // Текстура игрока
+        assetManager.load("assets/platform.png", Texture.class); // Текстура платформ
+        // assetManager.load("assets/items.png", Texture.class); // Текстура предметов (возможно, атлас или отдельные файлы) - временно закомментировано
+        // assetManager.load("assets/entities/enemies.png", Texture.class); // Текстура врагов (возможно, атлас или отдельные файлы) - временно закомментировано
+        assetManager.load("assets/Heart.png", Texture.class); // Сердечко UI
+        assetManager.load("assets/ui/background.png", Texture.class); // Фон инвентаря (предположение)
+        // assetManager.load("assets/ui/inventory_slot.png", Texture.class); // Слот инвентаря (отсутствует) - временно закомментировано
+        // assetManager.load("assets/ui/button_inventory.png", Texture.class); // Кнопка инвентаря (отсутствует) - временно закомментировано
+        assetManager.load("assets/ui/healthbar_background.png", Texture.class); // Рамка полоски здоровья (предположение)
+        assetManager.load("assets/ui/healthbar_foreground.png", Texture.class); // Заполнение полоски здоровья (предположение)
+        assetManager.load("assets/kimchi/1kimchi.png", Texture.class);
+        assetManager.load("assets/kimchi/2kimchi.png", Texture.class);
+        assetManager.load("assets/kimchi/3kimchi.png", Texture.class);
+        assetManager.load("assets/entities/virus.png", Texture.class);
+        assetManager.load("assets/background_level_bonus.png", Texture.class);
+
+        // Сброс таймера загрузки
+        stateTime = 0;
+        loadingProgress = 0;
+    }
+
     @Override
     public void render(float delta) {
         try {
             stateTime += delta;
-            loadingProgress = Math.min(1.0f, stateTime / LOADING_DURATION);
+            
+            // Обновляем прогресс загрузки на основе реального прогресса AssetManager
+            if (assetManager != null) {
+                loadingProgress = assetManager.getProgress();
+            } else {
+                loadingProgress = Math.min(1.0f, stateTime / LOADING_DURATION);
+            }
 
             Gdx.gl.glClearColor(0, 0, 0, 1);
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -125,22 +198,15 @@ public class LoadingScreen implements Screen {
                 // Прогресс загрузки (фиолетовый цвет)
                 batch.setColor(0.5f, 0.2f, 0.8f, 1);
                 batch.draw(whitePixel, barX, barY, barWidth * loadingProgress, barHeight);
-            } else {
-                Gdx.app.error("LoadingScreen", "No kimchi frames loaded");
             }
             
             batch.setColor(1, 1, 1, 1);
             batch.end();
 
-            // Переход к следующему экрану после завершения загрузки
-            if (stateTime >= LOADING_DURATION) {
-                Gdx.app.log("LoadingScreen", "Loading completed, transitioning to GameScreen");
-                GameScreen gameScreen = game.getGameScreen();
-                if (gameScreen != null) {
-                    game.setScreen(gameScreen);
-                } else {
-                    Gdx.app.error("LoadingScreen", "GameScreen is null, cannot transition");
-                }
+            // Проверяем завершение загрузки
+            if (assetManager != null && assetManager.update()) {
+                Gdx.app.log("LoadingScreen", "All assets loaded successfully");
+                game.finishLoadingLevelAndTransition(nextLevelNumber, assetManager);
             }
         } catch (Exception e) {
             Gdx.app.error("LoadingScreen", "Error in render method", e);
@@ -162,20 +228,22 @@ public class LoadingScreen implements Screen {
             for (Texture frame : kimchiFrames) {
                 if (frame != null) frame.dispose();
             }
+            assetManager.dispose();
         } catch (Exception e) {
             Gdx.app.error("LoadingScreen", "Error disposing resources", e);
         }
     }
 
     @Override
-    public void show() {}
+    public void hide() {
+        // Очищаем экран загрузки при переходе на другой экран
+    }
 
     @Override
-    public void hide() {}
+    public void pause() {
+    }
 
     @Override
-    public void pause() {}
-
-    @Override
-    public void resume() {}
+    public void resume() {
+    }
 } 

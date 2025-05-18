@@ -1,7 +1,11 @@
 package com.cyberkingdom.entities;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.utils.Array;
 
 public class EntitySystem {
     private List<GameEntity> entities;
@@ -56,5 +60,20 @@ public class EntitySystem {
                 entity.update(deltaTime);
             }
         }
+    }
+
+    // Метод для удаления всех сущностей, кроме игрока
+    public void removeAllEntitiesExceptPlayer() {
+        Iterator<GameEntity> iterator = entities.iterator();
+        while (iterator.hasNext()) {
+            GameEntity entity = iterator.next();
+            // Проверяем, если сущность не является игроком
+            if (!(entity instanceof Player)) {
+                // Возможно, нужно вызвать dispose() для удаляемой сущности
+                // entity.dispose(); // Раскомментируйте, если сущности требуют очистки ресурсов
+                iterator.remove();
+            }
+        }
+        Gdx.app.log("EntitySystem", "Removed all entities except player.");
     }
 }

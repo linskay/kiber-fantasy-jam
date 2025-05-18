@@ -18,7 +18,7 @@ public class BossSpawnManager {
     private final EntitySystem entitySystem;
     private final EntityFactory entityFactory;
     private final PhysicsSystem physicsSystem;
-    private final Player player;
+    private Player player;
     private boolean bossSpawned = false;
     private static final Set<ItemType> REQUIRED_ITEMS = new HashSet<>(Arrays.asList(
         ItemType.USB_SKATERT,
@@ -30,10 +30,13 @@ public class BossSpawnManager {
     ));
 
     public BossSpawnManager(EntitySystem entitySystem, EntityFactory entityFactory, 
-                          PhysicsSystem physicsSystem, Player player) {
+                          PhysicsSystem physicsSystem) {
         this.entitySystem = entitySystem;
         this.entityFactory = entityFactory;
         this.physicsSystem = physicsSystem;
+    }
+
+    public void setPlayer(Player player) {
         this.player = player;
     }
 

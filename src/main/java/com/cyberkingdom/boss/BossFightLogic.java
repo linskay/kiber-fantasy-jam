@@ -7,13 +7,16 @@ import com.cyberkingdom.world.LevelLoader;
 
 public class BossFightLogic {
     private final LevelLoader levelLoader;
-    private final Player player;
+    private Player player;
     private final GameEngine gameEngine;
     private boolean isBossFightActive = false;
 
-    public BossFightLogic(LevelLoader levelLoader, Player player, GameEngine gameEngine) {
-        this.levelLoader = levelLoader;
+    public void setPlayer(Player player) {
         this.player = player;
+    }
+
+    public BossFightLogic(LevelLoader levelLoader, GameEngine gameEngine) {
+        this.levelLoader = levelLoader;
         this.gameEngine = gameEngine;
         Gdx.app.log("BossFightLogic", "Initialized successfully");
     }

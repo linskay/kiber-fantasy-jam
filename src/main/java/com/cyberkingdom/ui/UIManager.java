@@ -240,4 +240,13 @@ public class UIManager {
             inventoryWindow.setInventory(player.getInventory());
         }
     }
+
+    public BitmapFont getFont() {
+        return this.font;
+    }
+
+    // Метод для установки InputHandler
+    public void setInputHandler(InputHandler inputHandler) {
+        this.inputHandler = inputHandler;
+    }
 }

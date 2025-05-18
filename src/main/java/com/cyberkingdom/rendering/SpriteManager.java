@@ -75,6 +75,9 @@ public class SpriteManager {
             loadTexture("Boss", "assets/generic_boss.png"); // Предполагаемый путь
             loadTexture("CyberBackground", "assets/background_cyber.png"); // Предполагаемый путь
         
+            // Добавляем загрузку текстуры для FlyingBook
+            loadTexture("FlyingBook", "assets/textures/items/flying_book.png");
+        
             Gdx.app.log("SpriteManager", "Finished attempting to load textures");
         } catch (Exception e) {
             Gdx.app.error("SpriteManager", "Error during texture loading process", e);

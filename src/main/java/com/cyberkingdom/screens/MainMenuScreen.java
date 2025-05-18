@@ -289,21 +289,26 @@ public class MainMenuScreen implements Screen {
     }
 
     private void handleSelection() {
-        selectSound.play(0.7f);
-        switch(selectedIndex) {
+        if(selectSound != null) selectSound.play(0.7f);
+        switch (selectedIndex) {
             case 0:
+                // Кнопка "Сисадминить"
                 engine.startGame();
                 break;
             case 1:
+                // Кнопка "Шо-то типа ачивок"
                 engine.showAchievementsScreen();
                 break;
             case 2:
+                // Кнопка "То, что обычно не читают" (История)
                 engine.showStoryScreen();
                 break;
             case 3:
+                // Кнопка "Для вас старались" (Титры)
                 engine.showCreditsScreen();
                 break;
             case 4:
+                // Кнопка "Да ну это все..."
                 Gdx.app.exit();
                 break;
         }

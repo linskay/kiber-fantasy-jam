@@ -62,6 +62,7 @@ public class GameScreen implements Screen {
                      BossSpawnManager bossSpawnManager, int initialLevel) {
         try {
             Gdx.app.log("GameScreen", "Initializing GameScreen");
+            Gdx.app.log("GameScreen", "EntitySystem: " + (entitySystem != null ? "not null" : "null"));
             
             this.gameEngine = gameEngine;
             this.entitySystem = entitySystem;
@@ -92,6 +93,10 @@ public class GameScreen implements Screen {
             }
             Gdx.app.log("GameScreen", "Player retrieved from physicsSystem");
             
+            // Инициализация InputHandler здесь
+            this.inputHandler = new InputHandler(player);
+            Gdx.app.log("GameScreen", "InputHandler initialized in GameScreen");
+
             // Устанавливаем ссылку на GameScreen в объекте Player
             player.setGameScreen(this);
             Gdx.app.log("GameScreen", "GameScreen reference set in Player object");
@@ -144,13 +149,17 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Обновляем состояние игры
+        // Обновляем состояние игры (включая inputHandler.update)
         update(delta);
 
         camera.update();
         batch.setProjectionMatrix(camera.combined);
 
         batch.begin();
+        // Устанавливаем режим смешивания для прозрачности
+        batch.enableBlending();
+        batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+
         // Рисуем фон
         if (backgroundTexture != null) {
             batch.draw(backgroundTexture, 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
@@ -222,6 +231,11 @@ public class GameScreen implements Screen {
     private void update(float delta) {
         // Добавляем лог в начало update
         Gdx.app.log("GameScreen", "GameScreen update called");
+
+        // Обновляем обработчик ввода
+        if (inputHandler != null) {
+            inputHandler.update(delta);
+        }
 
         // Обновляем физику и сущности
         physicsSystem.update(delta);
@@ -391,29 +405,14 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        Gdx.app.log("GameScreen", "GameScreen shown");
-        // Настройка обработчика ввода будет происходить в GameEngine при переходе на этот экран
-        // Удаляем логику, связанную с InputMultiplexer отсюда
-        /*
-        InputMultiplexer multiplexer = new InputMultiplexer();
-        if (uiManager != null && uiManager.getStage() != null) {
-            multiplexer.addProcessor(uiManager.getStage());
-             Gdx.app.log("GameScreen", "Added UIManager Stage to InputMultiplexer");
-        } else {
-             Gdx.app.error("GameScreen", "UIManager or Stage is null, cannot add to InputMultiplexer");
-        }
-
-        // Добавляем InputHandler, если он не null
+        Gdx.app.log("GameScreen", "GameScreen show called");
+        // Устанавливаем InputProcessor для обработки ввода
         if (inputHandler != null) {
-            multiplexer.addProcessor(inputHandler);
-            Gdx.app.log("GameScreen", "Added InputHandler to InputMultiplexer");
+            Gdx.input.setInputProcessor(new InputMultiplexer(inputHandler, uiManager.getStage()));
+            Gdx.app.log("GameScreen", "InputProcessor set to InputMultiplexer with InputHandler and UIManager Stage");
         } else {
-            Gdx.app.error("GameScreen", "InputHandler is null, cannot add to InputMultiplexer");
+            Gdx.app.error("GameScreen", "InputHandler is null in show()");
         }
-
-        Gdx.input.setInputProcessor(multiplexer);
-        Gdx.app.log("GameScreen", "Input processor set.");
-        */
         
         // Запускаем музыку уровня, если она установлена
         if (levelMusic != null) {
@@ -427,10 +426,12 @@ public class GameScreen implements Screen {
 
     @Override
     public void hide() {
+        Gdx.app.log("GameScreen", "GameScreen hide called");
+        // Убираем InputProcessor
+        Gdx.input.setInputProcessor(null);
         if (levelMusic != null) {
             levelMusic.stop();
         }
-        Gdx.input.setInputProcessor(null);
         Gdx.app.log("GameScreen", "GameScreen hidden, input processor set to null");
     }
 
@@ -519,5 +520,9 @@ public class GameScreen implements Screen {
 
     public Music getLevelMusic() {
         return levelMusic;
+    }
+
+    public InputHandler getInputHandler() {
+        return inputHandler;
     }
 }

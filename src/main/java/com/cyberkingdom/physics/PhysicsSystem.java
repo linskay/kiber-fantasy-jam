@@ -36,7 +36,6 @@ public class PhysicsSystem {
         for (GameEntity entity : entitySystem.getEntities()) {
             if (entity instanceof Player) {
                 this.player = (Player) entity;
-                this.inputHandler = new InputHandler(player);
                 Gdx.app.debug("Physics", "Player initialized in PhysicsSystem");
                 isPlayerInitialized = true;
                 break;
@@ -49,7 +48,6 @@ public class PhysicsSystem {
 
     public void setPlayer(Player player) {
         this.player = player;
-        this.inputHandler = new InputHandler(player);
         isPlayerInitialized = true;
     }
 

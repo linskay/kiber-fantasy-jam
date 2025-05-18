@@ -3,17 +3,17 @@ package com.cyberkingdom.entities;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.Array;
 
 public class EntitySystem {
-    private List<GameEntity> entities;
+    private List<GameEntity> entities = new CopyOnWriteArrayList<>();
     private int currentLevel = 1;
     private EntityFactory entityFactory;
 
     public EntitySystem() {
-        this.entities = new ArrayList<>();
     }
 
     public void addEntity(GameEntity entity) {

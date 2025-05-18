@@ -58,6 +58,10 @@ public class ItemPickupSystem {
                         // Запускаем мини-игру при сборе WiFi ключа
                         Gdx.app.log("ItemPickupSystem", "Starting WiFi Key minigame");
                         player.startMinigame(item);
+                    } else if (item.getItemType() == ItemType.KNIGA) {
+                        Gdx.app.log("ItemPickupSystem", "Detected KNIGA item. Calling player.collectItem.");
+                        player.collectItem(item);
+                        itemsToRemove.add(item);
                     } else {
                         // Добавляем предмет в инвентарь игрока
                         if (player.getInventory() != null) {
@@ -80,7 +84,11 @@ public class ItemPickupSystem {
 
         // Удаляем собранные предметы
         for (Item item : itemsToRemove) {
-            entitySystem.removeEntity(item);
+            if (entitySystem.getEntities().contains(item)) {
+                entitySystem.removeEntity(item);
+                Gdx.app.log("ItemPickupSystem", "Removed item from EntitySystem: " + item.getItemType());
+            }
+            
             if (item.getItemType() == ItemType.COIN) {
                 // Если это монета, удаляем платформу из списка платформ с монетами
                 Rectangle platform = new Rectangle(item.getPosition().x, item.getPosition().y - 10, 32, 32);

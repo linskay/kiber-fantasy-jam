@@ -17,6 +17,15 @@ import com.cyberkingdom.entities.EntitySystem;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.audio.Sound;
+import com.cyberkingdom.entities.FlyingBook;
+import com.cyberkingdom.items.ItemType;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 public class Player extends GameEntity implements Collidable {
     private static final float MOVE_SPEED = 300f;
@@ -86,6 +95,37 @@ public class Player extends GameEntity implements Collidable {
     private Sound coinSound;
     private Sound jumpSound;
     private Sound inventorySound;
+    private boolean isBookAnimationActive = false;
+    private float bookAnimationTimer = 0f;
+    private static final float BOOK_ANIMATION_DURATION = 3.0f;
+    private TextureRegion originalTextureRegion;
+    private Texture bookTexture;
+    private FlyingBook activeFlyingBook;
+    private boolean isControlsLocked = false;
+    private Item collectedBookItem;
+
+    private BitmapFont font;
+    private String currentPhrase = null;
+    private float phraseTimer = 0f;
+    private static final float PHRASE_DURATION = 3.0f; // Длительность отображения фразы
+    private float phraseCooldown = 0f;
+    private static final float PHRASE_COOLDOWN_MIN = 5.0f; // Минимальный интервал между фразами
+    private static final float PHRASE_COOLDOWN_MAX = 15.0f; // Максимальный интервал между фразами
+
+    private static final List<String> PHRASES = Arrays.asList(
+        "Вот это я понимаю\nсловил баг в браузере",
+        "Надо было апгрейдить броню,\nа не драйвера",
+        "Ты че, на PHP пишешь?!\nРэдфлаг",
+        "Интересно, это баг\nили я тупой?",
+        "Где загуглить\n\"Как пройти эту игру\"?",
+        "Дайте сюда этих гениев,\nкоторые написали этот код",
+        "А это точно\nне вирус?",
+        "Я не программист,\nя просто гуглил как сделать игру...",
+        "Где мой\nкофе?",
+        "Это не баг,\nэто фича",
+        "Может\nперезапустимся?"
+    );
+    private Random random = new Random();
 
     public Player(Vector2 position, SpriteManager spriteManager) {
         super("Player", spriteManager);
@@ -119,6 +159,9 @@ public class Player extends GameEntity implements Collidable {
         
         // Инициализируем анимацию
         this.animation = new AnimationComponent();
+        // Сохраняем оригинальную текстуру
+        this.originalTextureRegion = animation.getCurrentFrame(0);
+        Gdx.app.log("Player", "Original texture region saved.");
     }
 
     private void loadAnimations() {
@@ -202,6 +245,22 @@ public class Player extends GameEntity implements Collidable {
             } else {
                 Gdx.app.error("Player", "Failed to load death textures");
             }
+
+            // Загрузка текстуры для анимации книги (knigaboshka.png)
+            /*
+            try {
+                Gdx.app.log("Player", "Attempting to load book texture (knigaboshka.png)...");
+                // Используем полный путь, так как SpriteManager может не знать подкаталоги
+                bookTexture = new Texture(Gdx.files.internal("assets/entities/oleg_run/knigaboshka.png"));
+                if (bookTexture != null) {
+                    Gdx.app.log("Player", "Book texture loaded successfully. Size: " + bookTexture.getWidth() + "x" + bookTexture.getHeight());
+                } else {
+                    Gdx.app.error("Player", "Failed to load book texture for animation. Texture object is null.");
+                }
+            } catch (Exception e) {
+                Gdx.app.error("Player", "Error loading book texture for animation", e);
+            }
+            */
         } catch (Exception e) {
             Gdx.app.error("Player", "Error loading animations", e);
             createFallbackTexture();
@@ -308,9 +367,26 @@ public class Player extends GameEntity implements Collidable {
         super.update(deltaTime);
         collision.update(position);
 
-        updateAnimation();
-        updatePosition(deltaTime);
-        updateTimers(deltaTime);
+        if (isBookAnimationActive) {
+            bookAnimationTimer += deltaTime;
+            // Gdx.app.log("Player", "Book animation active. Timer: " + bookAnimationTimer + "/" + BOOK_ANIMATION_DURATION);
+            
+            // Проверяем, достигла ли книга игрока ИЛИ истекло ли время анимации
+            if ((activeFlyingBook != null && activeFlyingBook.isCollected()) || bookAnimationTimer >= BOOK_ANIMATION_DURATION) {
+                Gdx.app.log("Player", "Book animation condition met. Book collected: " + (activeFlyingBook != null && activeFlyingBook.isCollected()) + ", Timer elapsed: " + (bookAnimationTimer >= BOOK_ANIMATION_DURATION));
+                endBookAnimation();
+            } else {
+                 // Обновляем только FlyingBook, если он активен и анимация активна
+                 if (activeFlyingBook != null && activeFlyingBook.isActive()) {
+                     activeFlyingBook.update(deltaTime);
+                 }
+            }
+        } else { // Обычное обновление игрока, когда анимация книги не активна
+            updateAnimation();
+            updatePosition(deltaTime);
+            updateTimers(deltaTime);
+            updatePhrase(deltaTime); // Обновляем таймер фраз
+        }
     }
 
     private void updateAnimation() {
@@ -374,6 +450,26 @@ public class Player extends GameEntity implements Collidable {
         }
     }
 
+    private void updatePhrase(float deltaTime) {
+        if (currentPhrase != null) {
+            phraseTimer += deltaTime;
+            if (phraseTimer >= PHRASE_DURATION) {
+                currentPhrase = null;
+                // Устанавливаем новый случайный кулдаун перед следующей фразой
+                phraseCooldown = PHRASE_COOLDOWN_MIN + random.nextFloat() * (PHRASE_COOLDOWN_MAX - PHRASE_COOLDOWN_MIN);
+                Gdx.app.log("Player", "Phrase ended. Next phrase cooldown: " + phraseCooldown);
+            }
+        } else {
+            phraseCooldown -= deltaTime;
+            if (phraseCooldown <= 0) {
+                // Выбираем случайную фразу
+                currentPhrase = PHRASES.get(random.nextInt(PHRASES.size()));
+                phraseTimer = 0f;
+                Gdx.app.log("Player", "New random phrase: " + currentPhrase + ", font: " + (font != null ? "loaded" : "null"));
+            }
+        }
+    }
+
     public void move(float deltaX, float deltaY) {
         float minX = 0;
         float maxX = LEVEL_WIDTH - PLAYER_SIZE;
@@ -418,28 +514,64 @@ public class Player extends GameEntity implements Collidable {
     }
 
     public void collectItem(Item item) {
+        Gdx.app.log("Player", "collectItem called for item type: " + (item != null ? item.getItemType() : "null"));
         if (inventory != null) {
             inventory.addItem(item);
             item.setActive(false);
-            
+
             EntitySystem es = getEntitySystem();
             if (es != null) {
-                es.removeEntity(item);
-                Gdx.app.log("Player", "Removed item entity from EntitySystem: " + item.getItemType());
+                Gdx.app.log("Player", "Checking item type for KNIGA animation");
+                if (item != null && item.getItemType() == ItemType.KNIGA) {
+                    Gdx.app.log("Player", "Item is KNIGA. Attempting to start animation.");
+                    Gdx.app.log("Player", "Collected KNIGA! Starting animation. Book texture: " + (bookTexture != null ? "loaded" : "null"));
+                    Gdx.app.log("Player", "Player position: " + position.x + ", " + position.y);
+                    Gdx.app.log("Player", "Item position: " + item.getPosition().x + ", " + item.getPosition().y);
+                    collectedBookItem = item;
+                    startBookAnimation(item);
+                } else {
+                    if (item != null) {
+                        Gdx.app.log("Player", "Item is not KNIGA, removing from EntitySystem: " + item.getItemType());
+                        es.removeEntity(item);
+                    } else {
+                         Gdx.app.error("Player", "Collected item is null, cannot remove from EntitySystem.");
+                    }
+                }
+
             } else {
-                 Gdx.app.error("Player", "EntitySystem is null, cannot remove item entity.");
+                 Gdx.app.error("Player", "EntitySystem is null, cannot process collected item.");
             }
-            
-            Gdx.app.log("Player", "Collected item: " + item.getItemType() + ", set to inactive.");
+
+            Gdx.app.log("Player", "Collected item: " + (item != null ? item.getItemType() : "null") + ", set to inactive.");
+        } else {
+            Gdx.app.error("Player", "Inventory is null, cannot collect item.");
         }
     }
 
     @Override
     public void render(SpriteBatch batch) {
-        if (animation != null) {
+        if (isBookAnimationActive) {
+            // Отрисовываем книгу вместо игрока
+            if (bookTexture != null) {
+                batch.draw(bookTexture, position.x, position.y, PLAYER_SIZE, PLAYER_SIZE);
+            }
+        } else if (animation != null) {
             TextureRegion currentFrame = animation.getCurrentFrame(Gdx.graphics.getDeltaTime());
             if (currentFrame != null) {
                 batch.draw(currentFrame, position.x, position.y, PLAYER_SIZE, PLAYER_SIZE);
+            }
+        }
+
+        // Отрисовка случайной фразы над игроком
+        if (currentPhrase != null && font != null) {
+            Gdx.app.log("Player", "Rendering phrase: " + currentPhrase);
+            GlyphLayout layout = new GlyphLayout(font, currentPhrase);
+            float textX = position.x + (PLAYER_SIZE - layout.width) / 2;
+            float textY = position.y + PLAYER_SIZE + layout.height + 10; // 10 пикселей отступ над игроком
+            font.draw(batch, layout, textX, textY);
+        } else {
+            if (currentPhrase != null && font == null) {
+                Gdx.app.error("Player", "Cannot render phrase: font is null");
             }
         }
     }
@@ -455,12 +587,13 @@ public class Player extends GameEntity implements Collidable {
             collision = null;
         }
         gameScreen = null;
-        if (texture != null) {
-            texture.dispose();
-            texture = null;
-        }
+        // Удаляем dispose для texture, так как он может быть fallbackTexture или null
+        // if (texture != null) {
+        //     texture.dispose();
+        //     texture = null;
+        // }
         if (animation != null) {
-            animation.dispose();
+            animation.dispose(); // Освобождаем ресурсы анимаций
             animation = null;
         }
         // Освобождаем ресурсы звуков
@@ -476,10 +609,21 @@ public class Player extends GameEntity implements Collidable {
             inventorySound.dispose();
             inventorySound = null;
         }
+        // Освобождаем ресурс текстуры книги, если она была загружена напрямую
+        if (bookTexture != null) {
+             Gdx.app.log("Player", "Disposing knigaboshka texture");
+            bookTexture.dispose();
+            bookTexture = null;
+        }
+         Gdx.app.log("Player", "Player disposed.");
     }
 
     public void setGameScreen(GameScreen gameScreen) {
+        Gdx.app.log("Player", "Setting GameScreen: " + (gameScreen != null ? "not null" : "null"));
         this.gameScreen = gameScreen;
+        if (gameScreen != null) {
+            Gdx.app.log("Player", "GameScreen EntitySystem: " + (gameScreen.getEntitySystem() != null ? "not null" : "null"));
+        }
     }
 
     public void setInventory(Inventory inventory) {
@@ -487,19 +631,25 @@ public class Player extends GameEntity implements Collidable {
     }
 
     public void moveLeft() {
-        velocity.x = -MOVE_SPEED;
+        if (!isControlsLocked) {
+            velocity.x = -MOVE_SPEED;
+        }
     }
 
     public void moveRight() {
-        velocity.x = MOVE_SPEED;
+        if (!isControlsLocked) {
+            velocity.x = MOVE_SPEED;
+        }
     }
 
     public void stop() {
-        velocity.x = 0;
+        if (!isControlsLocked) {
+            velocity.x = 0;
+        }
     }
 
     public void jump() {
-        if (canJump()) {
+        if (!isControlsLocked && canJump()) {
             velocity.y = JUMP_VELOCITY;
             jumpsLeft--;
             isJumping = true;
@@ -568,7 +718,7 @@ public class Player extends GameEntity implements Collidable {
     }
 
     public void toggleInventory() {
-        if (inventory != null) {
+        if (!isControlsLocked && inventory != null) {
             inventory.toggle();
             // Воспроизводим звук открытия инвентаря
             if (inventorySound != null) {
@@ -576,5 +726,123 @@ public class Player extends GameEntity implements Collidable {
                 Gdx.app.log("Player", "Playing inventory sound.");
             }
         }
+    }
+
+    public void startBookAnimation(Item bookItem) {
+        Gdx.app.log("Player", "Starting book animation");
+        if (gameScreen == null) {
+            Gdx.app.error("Player", "GameScreen is null in startBookAnimation");
+            return;
+        }
+        
+        EntitySystem entitySystem = gameScreen.getEntitySystem();
+        if (entitySystem == null) {
+            Gdx.app.error("Player", "EntitySystem is null in startBookAnimation");
+            return;
+        }
+        
+        EntityFactory entityFactory = entitySystem.getFactory();
+        if (entityFactory == null) {
+            Gdx.app.error("Player", "EntityFactory is null in startBookAnimation");
+            return;
+        }
+        
+        // Останавливаем игрока
+        velocity.set(0, 0);
+        Gdx.app.log("Player", "Player stopped for book animation");
+        
+        // Сохраняем текущую текстуру игрока
+        if (animation != null) {
+            originalTextureRegion = animation.getCurrentFrame(0);
+             Gdx.app.log("Player", "Saved original texture region");
+        } else {
+             Gdx.app.error("Player", "Animation component is null, cannot save original texture.");
+        }
+        
+        // Получаем текстуру knigaboshka для игрока
+        try {
+            bookTexture = new Texture(Gdx.files.internal("assets/entities/oleg_run/knigaboshka.png"));
+            if (bookTexture != null) {
+                 Gdx.app.log("Player", "Loaded knigaboshka texture successfully");
+            } else {
+                 Gdx.app.error("Player", "Failed to load knigaboshka texture: Texture object is null");
+            }
+        } catch (Exception e) {
+            Gdx.app.error("Player", "Failed to load knigaboshka texture", e);
+            return;
+        }
+        
+        // Создаем FlyingBook с обычной текстурой книги
+        Vector2 spawnPosition = new Vector2(position.x, position.y + 200); // Немного выше игрока
+        Gdx.app.log("Player", "Creating FlyingBook at position: " + spawnPosition.x + ", " + spawnPosition.y);
+        
+        FlyingBook flyingBook = entityFactory.createFlyingBook(spawnPosition);
+        if (flyingBook != null) {
+            flyingBook.setTarget(this);
+            activeFlyingBook = flyingBook;
+            entitySystem.addEntity(flyingBook);
+            
+            // Активируем анимацию
+            isBookAnimationActive = true;
+            bookAnimationTimer = 0f;
+            isControlsLocked = true;
+            collectedBookItem = bookItem;
+            
+            Gdx.app.log("Player", "Book animation started successfully. isBookAnimationActive: " + isBookAnimationActive + ", isControlsLocked: " + isControlsLocked);
+        } else {
+            Gdx.app.error("Player", "Failed to create FlyingBook");
+        }
+    }
+
+    private void endBookAnimation() {
+        Gdx.app.log("Player", "Ending book animation");
+        isBookAnimationActive = false;
+        bookAnimationTimer = 0f;
+        isControlsLocked = false;
+
+        EntitySystem es = getEntitySystem();
+        if (es != null) {
+            if (activeFlyingBook != null) {
+                 Gdx.app.log("Player", "Removing active FlyingBook");
+                es.removeEntity(activeFlyingBook);
+                activeFlyingBook = null;
+            }
+            
+            // Удаляем собранный предмет только после завершения анимации
+            if (collectedBookItem != null && es.getEntities().contains(collectedBookItem)) {
+                 Gdx.app.log("Player", "Removing collected Book Item");
+                es.removeEntity(collectedBookItem);
+                collectedBookItem = null;
+            }
+        } else {
+             Gdx.app.error("Player", "EntitySystem is null in endBookAnimation");
+        }
+        
+        // Восстанавливаем анимацию игрока
+        if (animation != null) {
+            animation.setCurrentAnimation(ANIMATION_IDLE);
+             Gdx.app.log("Player", "Restored player animation to IDLE");
+        } else {
+             Gdx.app.error("Player", "Animation component is null, cannot restore animation.");
+        }
+        
+        // Освобождаем текстуру книгобошка
+        if (bookTexture != null) {
+             Gdx.app.log("Player", "Disposing knigaboshka texture");
+            bookTexture.dispose();
+            bookTexture = null;
+        }
+        
+        Gdx.app.log("Player", "Book animation ended. isBookAnimationActive: " + isBookAnimationActive + ", isControlsLocked: " + isControlsLocked);
+    }
+
+    public void setEntitySystem(EntitySystem entitySystem) {
+        this.entitySystem = entitySystem;
+        Gdx.app.log("Player", "EntitySystem set: " + (entitySystem != null ? "not null" : "null"));
+    }
+
+    public void setFont(BitmapFont font) {
+        this.font = font;
+        Gdx.app.log("Player", "Font set for player.");
     }
 }

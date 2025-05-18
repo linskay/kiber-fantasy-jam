@@ -47,6 +47,7 @@ public class LevelLoader {
     private float nextCoinSpawnTime;
     private static final int MAX_COINS = 15; // Максимальное количество монет на карте
     private static final float MIN_COIN_DISTANCE = 50f; // Минимальное расстояние между монетами
+    private static final float MIN_ITEM_DISTANCE = 150f; // Минимальное расстояние между уникальными предметами
     private List<Item> activeCoins = new ArrayList<>(); // Список активных монет
     private boolean dedinsaidSpawned = false;
     private DedinsaidBoss dedinsaidBoss = null;
@@ -107,7 +108,7 @@ public class LevelLoader {
         // Очищаем предыдущие платформы
         platforms.clear();
         Gdx.app.log("LevelLoader", "Cleared previous platforms");
-        
+
         // Создаем новые платформы
         createPlatforms(assetManager);
         Gdx.app.log("LevelLoader", "Created " + platforms.size() + " platforms");
@@ -312,7 +313,7 @@ public class LevelLoader {
         // Спавним 6 уникальных предметов
         if (UNIQUE_ITEMS.length < 6) {
              Gdx.app.error("LevelLoader", "Not enough unique item types defined to spawn 6 items!");
-             return;
+            return;
         }
 
         List<String> itemsToSpawn = new ArrayList<>();
@@ -325,26 +326,49 @@ public class LevelLoader {
         
         // Спавним выбранные предметы на случайных платформах
         for (String itemType : itemsToSpawn) {
-            Platform randomPlatform = getRandomPlatform();
-            if (randomPlatform == null) {
-                 Gdx.app.error("LevelLoader", "Cannot spawn initial item: " + itemType + ", no non-ground platforms available.");
-                 continue; // Пропускаем этот предмет и пытаемся заспавнить следующий
+            // Пытаемся найти подходящую позицию для предмета
+            boolean itemPlaced = false;
+            for (int attempt = 0; attempt < 10 && !itemPlaced; attempt++) {
+                Platform randomPlatform = getRandomPlatform();
+                if (randomPlatform == null) {
+                    Gdx.app.error("LevelLoader", "Cannot spawn initial item: " + itemType + ", no non-ground platforms available.");
+                    continue;
+                }
+                Rectangle platform = randomPlatform.getRectangle();
+
+                float x = platform.x + SPAWN_MARGIN + random.nextFloat() * (platform.width - 2 * SPAWN_MARGIN);
+                float y = platform.y + platform.height + 10;
+                Vector2 position = new Vector2(x, y);
+
+                // Проверяем расстояние до других предметов
+                boolean tooClose = false;
+                for (GameEntity entity : entitySystem.getEntities()) {
+                    if (entity instanceof Item) {
+                        float distance = position.dst(entity.getPosition());
+                        if (distance < MIN_ITEM_DISTANCE) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!tooClose) {
+                    Item item = entityFactory.createItem(itemType, position, 1);
+                    if (item != null) {
+                        entitySystem.addEntity(item);
+                        Gdx.app.log("LevelLoader", "Spawned initial unique item: " + itemType + " at position: " + x + ", " + y);
+                        itemPlaced = true;
+                    } else {
+                        Gdx.app.error("LevelLoader", "Failed to create initial unique item: " + itemType);
+                    }
+                }
             }
-            Rectangle platform = randomPlatform.getRectangle();
-
-            float x = platform.x + SPAWN_MARGIN + random.nextFloat() * (platform.width - 2 * SPAWN_MARGIN);
-            float y = platform.y + platform.height + 10;
-            Vector2 position = new Vector2(x, y);
-
-            Item item = entityFactory.createItem(itemType, position, 1);
-            if (item != null) {
-                entitySystem.addEntity(item);
-                Gdx.app.log("LevelLoader", "Spawned initial unique item: " + itemType + " at position: " + x + ", " + y);
-            } else {
-                Gdx.app.error("LevelLoader", "Failed to create initial unique item: " + itemType);
+            
+            if (!itemPlaced) {
+                Gdx.app.error("LevelLoader", "Failed to find suitable position for item: " + itemType + " after 10 attempts");
             }
         }
-         Gdx.app.log("LevelLoader", "Finished spawning initial items.");
+        Gdx.app.log("LevelLoader", "Finished spawning initial items.");
     }
 
     // Переименованный метод для спавна случайной монеты - вызывается в update
@@ -362,8 +386,8 @@ public class LevelLoader {
                      (random.nextFloat() * (platformRect.width - 2 * SPAWN_MARGIN));
             float y = platformRect.y + platformRect.height + 10 +
                      (random.nextFloat() * 20); // Добавляем случайную высоту
-            Vector2 spawnPos = new Vector2(x, y);
-
+                Vector2 spawnPos = new Vector2(x, y);
+                
             // Проверяем расстояние до существующих монет
             boolean tooClose = false;
             for (Item existingCoin : activeCoins) {
@@ -543,9 +567,9 @@ public class LevelLoader {
                  }
              }
              if (activeNonCoinItemCount == 0) {
-                 spawnCatMiner(entitySystem, player);
-                 catMinerSpawnTimer = 0f;
-                 catMinerActive = true;
+            spawnCatMiner(entitySystem, player);
+            catMinerSpawnTimer = 0f;
+            catMinerActive = true;
              }
         }
 

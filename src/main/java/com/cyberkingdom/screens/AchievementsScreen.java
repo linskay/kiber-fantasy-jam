@@ -44,7 +44,6 @@ public class AchievementsScreen implements Screen {
 
     private void initialize() {
         setupUI();
-        setupInput();
         calculateGrid();
     }
 
@@ -108,7 +107,6 @@ public class AchievementsScreen implements Screen {
 
     private void setupInput() {
         Gdx.input.setInputProcessor(new InputMultiplexer(
-                stage, // Клики через Stage
                 new InputAdapter() { // Клавиши напрямую
                     @Override
                     public boolean keyDown(int keycode) {
@@ -118,7 +116,8 @@ public class AchievementsScreen implements Screen {
                         }
                         return false;
                     }
-                }
+                },
+                stage // Клики через Stage, поставим последним
         ));
     }
 
@@ -202,6 +201,7 @@ public class AchievementsScreen implements Screen {
     @Override
     public void show() {
         MusicManager.play("assets/musics/menu.mp3", true);
+        setupInput(); // Вызываем setupInput() здесь
         // ... остальной код show ...
     }
 

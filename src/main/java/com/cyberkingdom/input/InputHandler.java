@@ -6,12 +6,16 @@ import com.badlogic.gdx.InputProcessor;
 import com.cyberkingdom.entities.Player;
 
 public class InputHandler implements InputProcessor {
-    private final Player player;
+    private Player player;
     private boolean jumpPressed = false;
     private boolean inventoryPressed = false;
     private boolean inventoryVisible = false;
 
     public InputHandler(Player player) {
+        this.player = player;
+    }
+
+    public void setPlayer(Player player) {
         this.player = player;
     }
 
@@ -47,7 +51,7 @@ public class InputHandler implements InputProcessor {
     public void handleInventory() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
             inventoryVisible = !inventoryVisible;
-            Gdx.app.log("InputHandler", "Inventory visibility changed to: " + inventoryVisible);
+            Gdx.app.log("InputHandler", "Inventory visibility changed via handleInventory to: " + inventoryVisible);
         }
     }
 
@@ -57,7 +61,14 @@ public class InputHandler implements InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
-        return true;
+        Gdx.app.log("InputHandler", "keyDown received: " + keycode);
+        if (keycode == Input.Keys.E) {
+            Gdx.app.log("InputHandler", "'E' key pressed");
+            inventoryVisible = !inventoryVisible;
+            Gdx.app.log("InputHandler", "Inventory visibility changed to: " + inventoryVisible);
+            return true;
+        }
+        return false;
     }
 
     @Override

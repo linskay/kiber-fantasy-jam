@@ -12,9 +12,9 @@ public class SpriteRenderer {
     private final SpriteBatch batch;
     private final SpriteManager spriteManager;
 
-    public SpriteRenderer(SpriteBatch batch) {
+    public SpriteRenderer(SpriteBatch batch, SpriteManager spriteManager) {
         this.batch = batch;
-        this.spriteManager = new SpriteManager();
+        this.spriteManager = spriteManager;
     }
 
     public SpriteManager getSpriteManager() {

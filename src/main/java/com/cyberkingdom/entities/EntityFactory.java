@@ -11,6 +11,7 @@ import com.cyberkingdom.rendering.SpriteManager;
 import com.cyberkingdom.entities.EntitySystem;
 import com.cyberkingdom.physics.PhysicsSystem;
 import com.cyberkingdom.entities.Projectile;
+import com.cyberkingdom.entities.FlyingBook;
 
 import java.util.Random;
 
@@ -35,9 +36,14 @@ public class EntityFactory {
     }
 
     public GameEntity createPlayer(Vector2 position, GameScreen gameScreen) {
+        Gdx.app.log("EntityFactory", "Creating player at position: " + position.x + ", " + position.y);
         Player player = new Player(position, spriteManager);
         if (gameScreen != null) {
+            Gdx.app.log("EntityFactory", "Setting GameScreen for player");
             player.setGameScreen(gameScreen);
+            player.setEntitySystem(gameScreen.getEntitySystem());
+        } else {
+            Gdx.app.error("EntityFactory", "GameScreen is null when creating player");
         }
         return player;
     }
@@ -160,6 +166,28 @@ public class EntityFactory {
 
         Projectile projectile = new Projectile(x, y, vx, vy, damage, spriteManager);
         return projectile;
+    }
+
+    public FlyingBook createFlyingBook(Vector2 position) {
+        try {
+             Gdx.app.log("EntityFactory", "Creating FlyingBook at " + position);
+            Texture bookTexture = spriteManager.getTexture("KNIGA");
+            if (bookTexture == null) {
+                Gdx.app.error("EntityFactory", "Failed to get KNIGA texture");
+                return null;
+            }
+            FlyingBook flyingBook = new FlyingBook(position, bookTexture);
+            // Устанавливаем цель - игрока из PhysicsSystem
+            if (physicsSystem != null && physicsSystem.getPlayer() != null) {
+                flyingBook.setTarget(physicsSystem.getPlayer());
+            } else {
+                Gdx.app.error("EntityFactory", "Cannot set target for FlyingBook - player is null");
+            }
+            return flyingBook;
+        } catch (Exception e) {
+             Gdx.app.error("EntityFactory", "Failed to create FlyingBook at " + position, e);
+             return null;
+        }
     }
 }
 

@@ -37,14 +37,15 @@ public class StoryScreen implements Screen {
     private float cursorTimer = 0f;
     private final float EXTRA_SCROLL_SPACE = 100f;
 
-    public StoryScreen(GameEngine engine) {
+    public StoryScreen(GameEngine engine, BitmapFont font) {
         this.engine = engine;
-        this.font = engine.getMenuFont();
+        this.font = font;
         this.selectSound = engine.getSelectSound();
         this.background = engine.getMainMenuBackground();
         this.cursorTexture = engine.getCursorTexture();
 
-        storyText = "Ну вот и сказочки конец, а кто слушал... Никто не слушал? Галя, отмена, давай по новой!\n\n" +
+        Gdx.app.log("StoryScreen", "Font in constructor before initialize(): " + (this.font != null ? "not null" : "null"));
+        storyText = "Ну вот и сказочки конец, а кто спУшИл... Никто не слушал? Галя, отмена, давай по новой!\n\n" +
                 "Главный герой Олег(сисадмин так-то), жил себе, не тужил в своей скромной, но уютной халупке, " +
                 "обнимаясь со своим верным другом компьютером. Каждый день он запускал его, радуясь, " +
                 "что все работает исправно и не дает сбоев.\n\n" +
@@ -64,7 +65,6 @@ public class StoryScreen implements Screen {
     }
 
     private void initialize() {
-        batch = new SpriteBatch();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         stage = new Stage();
@@ -139,10 +139,10 @@ public class StoryScreen implements Screen {
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
+        // Затемняем фон
+        batch.setColor(0.5f, 0.5f, 0.5f, 1.0f); // Устанавливаем серый цвет (можно настроить)
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-
-        batch.setColor(SHADOW_COLOR);
-        batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        // Сбрасываем цвет батча на белый для остальной отрисовки
         batch.setColor(Color.WHITE);
 
         drawTextWithShadow();
@@ -156,10 +156,21 @@ public class StoryScreen implements Screen {
 
     private void drawTextWithShadow() {
         float baseY = Gdx.graphics.getHeight() - MARGIN_TOP + scrollY + EXTRA_SCROLL_SPACE;
+
+        // Убедимся, что цвет батча установлен в белый перед отрисовкой текста
+        batch.setColor(Color.WHITE);
+        
+        // Отрисовка тени (черный цвет)
         font.setColor(0, 0, 0, 0.7f);
         font.draw(batch, layout, MARGIN_SIDES + 2, baseY - 2);
-        font.setColor(1, 1, 1, 1);
+        
+        // Отрисовка основного текста ярко-желтым цветом
+        font.setColor(1.0f, 1.0f, 0.0f, 1.0f);
         font.draw(batch, layout, MARGIN_SIDES, baseY);
+        
+        // Важно: сбрасываем цвет шрифта на белый после отрисовки текста,
+        // чтобы он не влиял на отрисовку других элементов (например, Label в Stage)
+        font.setColor(Color.WHITE);
     }
 
     private void handleInput(float delta) {
@@ -205,19 +216,30 @@ public class StoryScreen implements Screen {
 
     @Override
     public void dispose() {
-        batch.dispose();
         stage.dispose();
         font.getData().setScale(1.0f);
     }
 
     @Override
     public void show() {
+        if (batch == null) {
+            batch = new SpriteBatch();
+        }
         MusicManager.play("assets/musics/menu.mp3", true);
-        // ... остальной код show ...
+        setupInput();
+        Gdx.app.log("StoryScreen", "StoryScreen shown, SpriteBatch created.");
     }
 
     @Override
-    public void hide() { engine.resumeMusic(); }
+    public void hide() {
+        if (batch != null) {
+            batch.dispose();
+            batch = null;
+        }
+        Gdx.input.setInputProcessor(null);
+        Gdx.app.log("StoryScreen", "StoryScreen hidden, SpriteBatch disposed, input processor set to null");
+    }
+
     @Override
     public void pause() {}
     @Override

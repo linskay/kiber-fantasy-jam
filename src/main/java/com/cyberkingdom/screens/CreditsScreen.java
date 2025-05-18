@@ -30,10 +30,11 @@ public class CreditsScreen implements Screen {
     private final Color SHADOW_COLOR = new Color(0, 0, 0, 0.8f);
     private float cursorAlpha = 1f;
     private float cursorTimer = 0f;
+    private float glowTimer;
 
-    public CreditsScreen(GameEngine engine) {
+    public CreditsScreen(GameEngine engine, BitmapFont font) {
         this.engine = engine;
-        this.font = engine.getMenuFont();
+        this.font = font;
         this.selectSound = engine.getSelectSound();
         this.background = engine.getMainMenuBackground();
         this.cursorTexture = engine.getCursorTexture();
@@ -63,7 +64,6 @@ public class CreditsScreen implements Screen {
                 Gdx.graphics.getWidth() - (int)(MARGIN_SIDES * 2), Align.center, true);
 
         createBackButton();
-        setupInput();
     }
 
     private void setupInput() {
@@ -120,6 +120,7 @@ public class CreditsScreen implements Screen {
 
         cursorTimer += delta * 5;
         cursorAlpha = 0.4f + (MathUtils.sin(cursorTimer) + 1f) / 3f;
+        glowTimer += delta * 3f;
     }
 
     private void draw(float delta) {
@@ -128,14 +129,18 @@ public class CreditsScreen implements Screen {
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
+        // Затемняем фон
+        batch.setColor(0.5f, 0.5f, 0.5f, 1.0f); // Устанавливаем серый цвет (можно настроить)
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        // Сбрасываем цвет батча на белый для остальной отрисовки
+        batch.setColor(Color.WHITE);
 
-        // Тень текста
-        font.setColor(SHADOW_COLOR);
+        // Тень текста (темно-фиолетовый цвет)
+        font.setColor(0.2f, 0.0f, 0.3f, 0.8f);
         font.draw(batch, layout, MARGIN_SIDES + 2, scrollY - 2);
 
-        // Основной текст
-        font.setColor(1, 1, 1, 1);
+        // Основной текст с ярким фиолетовым цветом
+        font.setColor(0.8f, 0.2f, 1.0f, 1.0f);
         font.draw(batch, layout, MARGIN_SIDES, scrollY);
 
         // Курсор
@@ -169,6 +174,7 @@ public class CreditsScreen implements Screen {
     @Override
     public void show() {
         MusicManager.play("assets/musics/menu.mp3", true);
+        setupInput();
     }
 
     @Override

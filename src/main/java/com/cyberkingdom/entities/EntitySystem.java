@@ -66,16 +66,23 @@ public class EntitySystem {
 
     // Метод для удаления всех сущностей, кроме игрока
     public void removeAllEntitiesExceptPlayer() {
-        Iterator<GameEntity> iterator = entities.iterator();
-        while (iterator.hasNext()) {
-            GameEntity entity = iterator.next();
-            // Проверяем, если сущность не является игроком
+        List<GameEntity> entitiesToRemove = new ArrayList<>();
+        
+        // Сначала собираем все сущности для удаления
+        for (GameEntity entity : entities) {
             if (!(entity instanceof Player)) {
-                // Возможно, нужно вызвать dispose() для удаляемой сущности
-                // entity.dispose(); // Раскомментируйте, если сущности требуют очистки ресурсов
-                iterator.remove();
+                entitiesToRemove.add(entity);
             }
         }
+        
+        // Затем удаляем их
+        for (GameEntity entity : entitiesToRemove) {
+            if (entity != null) {
+                entity.dispose();
+                entities.remove(entity);
+            }
+        }
+        
         Gdx.app.log("EntitySystem", "Removed all entities except player.");
     }
 

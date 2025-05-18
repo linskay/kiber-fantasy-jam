@@ -259,7 +259,7 @@ public class WifiKeyMinigame {
 
         // Рисуем платформу
         if (platformTexture != null) {
-            batch.setColor(1, 1, 1, 0.5f); // Устанавливаем прозрачность
+            batch.setColor(1, 1, 1, 0f); // Устанавливаем полную прозрачность
             batch.draw(platformTexture, platformBounds.x, platformBounds.y, platformBounds.width, platformBounds.height);
             batch.setColor(1, 1, 1, 1); // Возвращаем нормальную прозрачность
         }

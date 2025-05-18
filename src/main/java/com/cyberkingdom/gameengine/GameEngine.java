@@ -51,10 +51,13 @@ public class GameEngine extends Game {
     private AchievementsScreen achievementsScreen;
     private ItemPickupSystem itemPickupSystem;
     private BossSpawnManager bossSpawnManager;
+    private AssetManager assetManager;
+    private int nextLevelToLoad;
 
     @Override
     public void create() {
         try {
+            assetManager = new AssetManager();
             initializeSystems();
             initializeScreens();
             showMainMenu();
@@ -163,7 +166,8 @@ public class GameEngine extends Game {
                 uiManager,
                 spriteRenderer,
                 itemPickupSystem,
-                bossSpawnManager
+                bossSpawnManager,
+                1 // Передаем начальный уровень (1) в конструктор GameScreen
             );
             
             Gdx.app.log("GameEngine", "All systems and core screens initialized successfully");
@@ -247,6 +251,9 @@ public class GameEngine extends Game {
     @Override
     public void dispose() {
         super.dispose();
+        if (assetManager != null) {
+            assetManager.dispose();
+        }
         batch.dispose();
         spriteManager.dispose();
         if (gameScreen != null) gameScreen.dispose();
@@ -276,17 +283,17 @@ public class GameEngine extends Game {
 
     // Метод для загрузки следующего уровня и переключения экранов
     public void loadNextLevel(int levelNumber) {
-        Gdx.app.log("GameEngine", "Loading level: " + levelNumber);
-        // Здесь мы будем переключаться на LoadingScreen
-        // LoadingScreen будет отвечать за загрузку ресурсов и данных уровня,
-        // а затем переключится обратно на GameScreen с новым уровнем.
-        
-        // Устанавливаем LoadingScreen и передаем ему номер следующего уровня
+        Gdx.app.log("GameEngine", "Attempting to load next level: " + levelNumber);
+        this.nextLevelToLoad = levelNumber;
         loadingScreen.setNextLevelNumber(levelNumber);
         setScreen(loadingScreen);
     }
 
     public void transitionToGameScreen() {
+        if (mainMenuScreen != null) {
+            mainMenuScreen.hide(); // Вызываем hide(), который теперь останавливает музыку
+            Gdx.app.log("GameEngine", "Main menu screen hidden and music stopped.");
+        }
         if (gameScreen != null) {
             Gdx.app.log("GameEngine", "Transitioning to GameScreen for level: " + currentLevelIndex);
             setScreen(gameScreen);
@@ -308,71 +315,106 @@ public class GameEngine extends Game {
 
     // Новый метод для завершения загрузки уровня и перехода на GameScreen
     public void finishLoadingLevelAndTransition(int levelNumber, AssetManager assetManager) {
+        Gdx.app.log("GameEngine", "Starting finishLoadingLevelAndTransition for level: " + levelNumber);
         try {
-            Gdx.app.log("GameEngine", "Finishing loading for level: " + levelNumber + " and transitioning to GameScreen.");
+            // Останавливаем музыку предыдущего уровня и меню
+            if (mainMenuScreen != null) {
+                mainMenuScreen.hide();
+                Gdx.app.log("GameEngine", "Main menu music stopped.");
+            }
             
-            // Устанавливаем текущий номер уровня
+            if (gameScreen != null && gameScreen.getLevelMusic() != null) {
+                gameScreen.getLevelMusic().stop();
+                Gdx.app.log("GameEngine", "Previous level music stopped.");
+            }
+
+            // Устанавливаем текущий уровень
             this.currentLevelIndex = levelNumber;
+            Gdx.app.log("GameEngine", "Current level index set to: " + currentLevelIndex);
 
-            if (levelLoader == null || entitySystem == null || gameScreen == null || uiManager == null) {
-                Gdx.app.error("GameEngine", "Required components are null, cannot finish loading and transition.");
-                return;
+            // Проверяем наличие необходимых компонентов
+            if (levelLoader == null || entitySystem == null || uiManager == null) {
+                Gdx.app.error("GameEngine", "Critical components are null: levelLoader=" + (levelLoader == null) + 
+                    ", entitySystem=" + (entitySystem == null) + ", uiManager=" + (uiManager == null));
+                throw new IllegalStateException("Required components are not initialized");
             }
-            
-            // Очищаем старые сущности перед загрузкой нового уровня
+
+            // Очищаем старые сущности
             entitySystem.clear();
-            physicsSystem.removeAllEntities();
-            
+            Gdx.app.log("GameEngine", "All entities cleared");
+
             // Создаем нового игрока для текущего уровня
-            Player newPlayer = (Player) entityFactory.createPlayer(new Vector2(100, 200), gameScreen); // Устанавливаем начальную позицию игрока
-            entitySystem.addEntity(newPlayer);
-            physicsSystem.setPlayer(newPlayer);
-
-            // Загружаем данные уровня с помощью LevelLoader
-            levelLoader.loadLevel(currentLevelIndex, entitySystem, assetManager);
-            Gdx.app.log("GameEngine", "Level data loaded by LevelLoader for level: " + currentLevelIndex);
-
-            if (newPlayer != null) {
-                gameScreen.setPlayer(newPlayer); // Также обновим ссылку на игрока в GameScreen
-                uiManager.setPlayer(newPlayer); // И в UIManager
-                // Возможно, нужно обновить ссылку на игрока и в других системах, если они ее используют
-                itemPickupSystem.setPlayer(newPlayer);
-                bossSpawnManager.setPlayer(newPlayer);
-                bossFightLogic.setPlayer(newPlayer);
-                Gdx.app.log("GameEngine", "New Player created and set in PhysicsSystem, GameScreen, UIManager, ItemPickupSystem, and BossFightLogic.");
-            } else {
-                Gdx.app.error("GameEngine", "ERROR: Player object is null after creation!");
-                // Обработка ошибки
+            player = (Player) entityFactory.createPlayer(new Vector2(100, 200), null);
+            entitySystem.addEntity(player);
+            physicsSystem.setPlayer(player);
+            // Обновляем игрока в ItemPickupSystem
+            if (itemPickupSystem != null) {
+                itemPickupSystem.setPlayer(player);
+                Gdx.app.log("GameEngine", "Player updated in ItemPickupSystem");
             }
+            // Обновляем игрока в BossSpawnManager
+            if (bossSpawnManager != null) {
+                bossSpawnManager.setPlayer(player);
+                Gdx.app.log("GameEngine", "Player updated in BossSpawnManager");
+            }
+            Gdx.app.log("GameEngine", "New player created for level: " + currentLevelIndex);
 
-            // Получаем загруженную музыку уровня из AssetManager
+            // Загружаем данные уровня
+            levelLoader.loadLevel(currentLevelIndex, entitySystem, assetManager);
+            Gdx.app.log("GameEngine", "Level data loaded for level: " + currentLevelIndex);
+
+            // Создаем новый GameScreen
+            gameScreen = new GameScreen(
+                this,
+                entitySystem,
+                physicsSystem,
+                levelLoader,
+                uiManager,
+                spriteRenderer,
+                itemPickupSystem,
+                bossSpawnManager,
+                currentLevelIndex
+            );
+            gameScreen.setPlayer(player);
+            Gdx.app.log("GameEngine", "New GameScreen created and player set");
+
+            // Загружаем и устанавливаем музыку уровня
             String musicPath = "assets/musics/level" + currentLevelIndex + ".mp3";
             if (assetManager.isLoaded(musicPath)) {
                 Music levelMusic = assetManager.get(musicPath, Music.class);
                 gameScreen.setLevelMusic(levelMusic);
-                Gdx.app.log("GameEngine", "Level music set in GameScreen for level: " + currentLevelIndex);
+                Gdx.app.log("GameEngine", "Level music loaded and set: " + musicPath);
+            } else {
+                Gdx.app.error("GameEngine", "Level music not loaded: " + musicPath);
             }
 
-            // Устанавливаем фоновую текстуру GameScreen
+            // Загружаем и устанавливаем фоновую текстуру
             String backgroundPath = "assets/background_level" + currentLevelIndex + ".png";
             if (currentLevelIndex == 2) {
                 backgroundPath = "assets/background_level_bonus.png";
             }
+            Gdx.app.log("GameEngine", "Loading background texture: " + backgroundPath);
 
             if (assetManager.isLoaded(backgroundPath)) {
                 Texture backgroundTexture = assetManager.get(backgroundPath, Texture.class);
                 gameScreen.setBackgroundTexture(backgroundTexture);
                 Gdx.app.log("GameEngine", "Background texture set in GameScreen for level: " + currentLevelIndex);
+            } else {
+                Gdx.app.error("GameEngine", "Background texture not loaded: " + backgroundPath);
             }
 
-            // Переходим на GameScreen
+            // Переходим на новый GameScreen
             setScreen(gameScreen);
             gameScreen.show();
-            Gdx.app.log("GameEngine", "Switched to GameScreen successfully");
+            Gdx.app.log("GameEngine", "Switched to new GameScreen successfully");
 
         } catch (Exception e) {
             Gdx.app.error("GameEngine", "Error during finishLoadingLevelAndTransition", e);
             showMainMenu();
         }
+    }
+
+    public AssetManager getAssetManager() {
+        return assetManager;
     }
 }

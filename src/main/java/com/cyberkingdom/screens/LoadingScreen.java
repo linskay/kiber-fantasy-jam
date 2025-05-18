@@ -22,6 +22,7 @@ import com.cyberkingdom.entities.EntityFactory;
 import com.cyberkingdom.rendering.SpriteRenderer;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 
 public class LoadingScreen implements Screen, Disposable {
     private final GameEngine game;
@@ -31,7 +32,7 @@ public class LoadingScreen implements Screen, Disposable {
     private float stateTime;
     private float loadingProgress;
     private static final float ANIMATION_SPEED = 0.1f;
-    private static final float LOADING_DURATION = 3.0f;
+    private static final float LOADING_DURATION = 3.0f; // Это, возможно, больше не используется напрямую для длительности
     private final Texture whitePixel;
     private final OrthographicCamera camera;
     private final FitViewport viewport;
@@ -41,6 +42,8 @@ public class LoadingScreen implements Screen, Disposable {
     private static final String LOADING_TEXT = "Олег сисадминит...";
     private AssetManager assetManager;
     private int nextLevelNumber;
+    private float minDisplayTimer = 0f; // Таймер для минимальной длительности показа экрана
+    private static final float MIN_DISPLAY_DURATION = 2.0f; // Минимальная длительность показа экрана в секундах
 
     public LoadingScreen(GameEngine game) {
         this.game = game;
@@ -101,6 +104,11 @@ public class LoadingScreen implements Screen, Disposable {
 
     @Override
     public void show() {
+        if (nextLevelNumber <= 0) {
+            Gdx.app.error("LoadingScreen", "Invalid nextLevelNumber: " + nextLevelNumber);
+            nextLevelNumber = 1; // Устанавливаем значение по умолчанию
+        }
+        
         Gdx.app.log("LoadingScreen", "Loading resources for level: " + nextLevelNumber);
         
         // Очищаем AssetManager от предыдущих ресурсов
@@ -108,9 +116,6 @@ public class LoadingScreen implements Screen, Disposable {
             assetManager.clear();
             Gdx.app.log("LoadingScreen", "AssetManager cleared.");
         }
-
-        // Загрузка ресурсов уровня с помощью assetManager
-        // Например, assetManager.load("assets/levels/level" + nextLevelNumber + ".tmx", TiledMap.class);
 
         // Загружаем фоновую текстуру уровня
         String backgroundPath = "assets/background_level" + nextLevelNumber + ".png";
@@ -127,17 +132,12 @@ public class LoadingScreen implements Screen, Disposable {
         Gdx.app.log("LoadingScreen", "Loading level music: " + musicPath);
         
         // Добавляем загрузку основных спрайтов и музыки, которые могут быть нужны для GameScreen
-        // Эти ресурсы загружаются для каждого уровня на случай, если AssetManager был очищен
-        assetManager.load("assets/entities/player.png", Texture.class); // Текстура игрока
-        assetManager.load("assets/platform.png", Texture.class); // Текстура платформ
-        // assetManager.load("assets/items.png", Texture.class); // Текстура предметов (возможно, атлас или отдельные файлы) - временно закомментировано
-        // assetManager.load("assets/entities/enemies.png", Texture.class); // Текстура врагов (возможно, атлас или отдельные файлы) - временно закомментировано
-        assetManager.load("assets/Heart.png", Texture.class); // Сердечко UI
-        assetManager.load("assets/ui/background.png", Texture.class); // Фон инвентаря (предположение)
-        // assetManager.load("assets/ui/inventory_slot.png", Texture.class); // Слот инвентаря (отсутствует) - временно закомментировано
-        // assetManager.load("assets/ui/button_inventory.png", Texture.class); // Кнопка инвентаря (отсутствует) - временно закомментировано
-        assetManager.load("assets/ui/healthbar_background.png", Texture.class); // Рамка полоски здоровья (предположение)
-        assetManager.load("assets/ui/healthbar_foreground.png", Texture.class); // Заполнение полоски здоровья (предположение)
+        assetManager.load("assets/entities/player.png", Texture.class);
+        assetManager.load("assets/platform.png", Texture.class);
+        assetManager.load("assets/Heart.png", Texture.class);
+        assetManager.load("assets/ui/background.png", Texture.class);
+        assetManager.load("assets/ui/healthbar_background.png", Texture.class);
+        assetManager.load("assets/ui/healthbar_foreground.png", Texture.class);
         assetManager.load("assets/kimchi/1kimchi.png", Texture.class);
         assetManager.load("assets/kimchi/2kimchi.png", Texture.class);
         assetManager.load("assets/kimchi/3kimchi.png", Texture.class);
@@ -151,66 +151,76 @@ public class LoadingScreen implements Screen, Disposable {
 
     @Override
     public void render(float delta) {
-        try {
-            stateTime += delta;
-            
-            // Обновляем прогресс загрузки на основе реального прогресса AssetManager
-            if (assetManager != null) {
-                loadingProgress = assetManager.getProgress();
-            } else {
-                loadingProgress = Math.min(1.0f, stateTime / LOADING_DURATION);
-            }
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-            Gdx.gl.glClearColor(0, 0, 0, 1);
-            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        // Обновляем stateTime для анимации кимчи
+        stateTime += delta;
+        // Обновляем таймер минимальной длительности показа
+        minDisplayTimer += delta;
 
-            batch.setProjectionMatrix(camera.combined);
-            batch.begin();
+        // Обновляем состояние загрузки
+        boolean loadingFinished = assetManager.update();
+        loadingProgress = assetManager.getProgress();
 
-            // Отрисовка фона
-            if (background != null) {
-                batch.draw(background, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-            }
-
-            // Отрисовка анимации загрузки
-            if (kimchiFrames.size > 0) {
-                int frameIndex = (int)(stateTime / ANIMATION_SPEED) % kimchiFrames.size;
-                Texture currentFrame = kimchiFrames.get(frameIndex);
-                float kimchiX = (WORLD_WIDTH - currentFrame.getWidth()) / 2;
-                float kimchiY = (WORLD_HEIGHT - currentFrame.getHeight()) / 2;
-                batch.draw(currentFrame, kimchiX, kimchiY);
-                
-                // Отрисовка текста под тараканом
-                font.draw(batch, LOADING_TEXT, 
-                    (WORLD_WIDTH - font.draw(batch, LOADING_TEXT, 0, 0, 0, 0, false).width) / 2,
-                    kimchiY - 40);
-                
-                // Отрисовка полосы загрузки
-                float barWidth = WORLD_WIDTH * 0.8f;
-                float barHeight = 20;
-                float barX = (WORLD_WIDTH - barWidth) / 2;
-                float barY = kimchiY - 80;
-                
-                // Фон полосы загрузки
-                batch.setColor(0.3f, 0.3f, 0.3f, 1);
-                batch.draw(whitePixel, barX, barY, barWidth, barHeight);
-                
-                // Прогресс загрузки (фиолетовый цвет)
-                batch.setColor(0.5f, 0.2f, 0.8f, 1);
-                batch.draw(whitePixel, barX, barY, barWidth * loadingProgress, barHeight);
-            }
-            
-            batch.setColor(1, 1, 1, 1);
-            batch.end();
-
-            // Проверяем завершение загрузки
-            if (assetManager != null && assetManager.update()) {
-                Gdx.app.log("LoadingScreen", "All assets loaded successfully");
-                game.finishLoadingLevelAndTransition(nextLevelNumber, assetManager);
-            }
-        } catch (Exception e) {
-            Gdx.app.error("LoadingScreen", "Error in render method", e);
+        // Проверяем, завершена ли загрузка и прошло ли минимальное время отображения
+        if (loadingFinished && minDisplayTimer >= MIN_DISPLAY_DURATION) {
+            Gdx.app.log("LoadingScreen", "Loading finished and minimum display time elapsed. Transitioning to level: " + nextLevelNumber);
+            game.finishLoadingLevelAndTransition(nextLevelNumber, assetManager);
         }
+
+        // Рисуем экран загрузки
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        
+        // Рисуем фон
+        if (background != null) {
+            batch.draw(background, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        }
+
+        // Расчет позиций для центрирования и вертикального расположения
+        float totalHeight = 100 + 20 + font.getCapHeight() + 20 + 30; // Суммарная высота кимчи, отступа, текста, отступа, полосы
+        float startY = (WORLD_HEIGHT - totalHeight) / 2 + totalHeight; // Начальная Y координата (сверху вниз)
+
+        // Рисуем анимацию кимчи
+        if (kimchiFrames != null && !kimchiFrames.isEmpty()) {
+            TextureRegion currentKimchiFrame = new TextureRegion(kimchiFrames.get((int) (stateTime / ANIMATION_SPEED) % kimchiFrames.size));
+            float kimchiSize = 100;
+            float kimchiX = (WORLD_WIDTH - kimchiSize) / 2;
+            float kimchiY = startY - kimchiSize; // Располагаем кимчи в верхней части блока
+            batch.draw(currentKimchiFrame, kimchiX, kimchiY, kimchiSize, kimchiSize);
+            startY = kimchiY - 20; // Обновляем startY для следующего элемента с отступом
+        }
+
+        // Рисуем текст загрузки
+        if (font != null) {
+            // Центрируем текст
+            GlyphLayout layout = new GlyphLayout(font, LOADING_TEXT);
+            float textX = (WORLD_WIDTH - layout.width) / 2;
+            float textY = startY; // Располагаем текст ниже кимчи с отступом
+            font.draw(batch, layout, textX, textY);
+            startY = textY - font.getCapHeight() - 20; // Обновляем startY для следующего элемента с отступом
+        }
+        
+        // Рисуем полосу загрузки
+        // Позиция и размер полосы загрузки
+        float progressBarWidth = 600;
+        float progressBarHeight = 30;
+        float progressBarX = (WORLD_WIDTH - progressBarWidth) / 2;
+        float progressBarY = startY - progressBarHeight; // Располагаем полосу ниже текста с отступом
+
+        // Рисуем фон полосы загрузки (серый)
+        batch.setColor(0.2f, 0.2f, 0.2f, 1f); // Темно-серый цвет
+        batch.draw(whitePixel, progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+
+        // Рисуем заполнение полосы загрузки (фиолетовый)
+        batch.setColor(0.5f, 0f, 0.8f, 1f); // Фиолетовый цвет (примерные значения RGB)
+        batch.draw(whitePixel, progressBarX, progressBarY, progressBarWidth * loadingProgress, progressBarHeight);
+
+        // Сбрасываем цвет batch обратно на белый
+        batch.setColor(1f, 1f, 1f, 1f);
+
+        batch.end();
     }
 
     @Override

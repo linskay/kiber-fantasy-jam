@@ -8,6 +8,7 @@ import com.cyberkingdom.items.Item;
 import com.cyberkingdom.items.ItemType;
 import com.cyberkingdom.screens.GameScreen;
 import com.cyberkingdom.rendering.SpriteManager;
+import com.cyberkingdom.entities.EntitySystem;
 import com.cyberkingdom.physics.PhysicsSystem;
 
 import java.util.Random;
@@ -52,20 +53,19 @@ public class EntityFactory {
         return enemy;
     }
 
-    public GameEntity createBoss(String name, float x, float y) {
-        Boss boss;
-        switch (name.toUpperCase()) {
+    public GameEntity createBoss(String bossType, float x, float y, EntitySystem entitySystem) {
+        Vector2 position = new Vector2(x, y);
+        switch (bossType) {
             case "CAT_MINER":
-                boss = new CatMiner(x, y, spriteManager);
-                break;
+                return new CatMiner(x, y, spriteManager);
+            case "DEDINSAID":
+                return new DedinsaidBoss(position, spriteManager, entitySystem);
             case "WITCH_VPN":
-                boss = new WitchVPN(x, y, physicsSystem, spriteManager);
-                break;
+                return new WitchVPN(x, y, physicsSystem, spriteManager);
             default:
-                boss = new Boss(name, x, y, spriteManager);
-                break;
+                Gdx.app.error("EntityFactory", "Unknown boss type: " + bossType);
+                return null;
         }
-        return boss;
     }
 
     public Item createItem(String itemType, Vector2 position, int quantity) {

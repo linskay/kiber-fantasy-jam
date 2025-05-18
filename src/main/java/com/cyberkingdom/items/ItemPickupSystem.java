@@ -49,7 +49,7 @@ public class ItemPickupSystem {
                     Gdx.app.log("ItemPickupSystem", "Collision detected with item: " + item.getItemType());
                     
                     if (item.getItemType() == ItemType.COIN) {
-                        player.collectCoin();
+                        player.collectCoin(item);
                         itemsToRemove.add(item);
                         if (itemPickupSound != null) {
                             itemPickupSound.play();

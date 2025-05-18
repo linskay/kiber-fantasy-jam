@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.Array;
 
 public class EntitySystem {
     private List<GameEntity> entities;
+    private int currentLevel = 1;
 
     public EntitySystem() {
         this.entities = new ArrayList<>();
@@ -75,5 +76,22 @@ public class EntitySystem {
             }
         }
         Gdx.app.log("EntitySystem", "Removed all entities except player.");
+    }
+
+    /**
+     * Вызывается при победе над боссом
+     */
+    public void onBossDefeated() {
+        Gdx.app.log("EntitySystem", "Boss defeated! Preparing for next level...");
+        // Здесь можно добавить логику перехода на следующий уровень
+        // Например, через GameScreen или другой менеджер уровней
+    }
+
+    public int getLevelNumber() {
+        return currentLevel;
+    }
+
+    public void setLevelNumber(int level) {
+        this.currentLevel = level;
     }
 }

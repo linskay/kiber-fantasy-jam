@@ -50,13 +50,16 @@ public class GameScreen implements Screen {
     private SpriteManager spriteManager;
     private Player player;
     private EntityFactory entityFactory;
-    private int currentLevel = 1;
+    private int currentLevel;
     private boolean levelTransitionInitiated = false;
+    private boolean isLevel1BossDefeated = false;
+    private boolean isLevel2BossDefeated = false;
+    private boolean isLevel3BossDefeated = false;
 
     public GameScreen(GameEngine gameEngine, EntitySystem entitySystem, PhysicsSystem physicsSystem,
                      LevelLoader levelLoader, UIManager uiManager, SpriteRenderer spriteRenderer,
                      ItemPickupSystem itemPickupSystem,
-                     BossSpawnManager bossSpawnManager) {
+                     BossSpawnManager bossSpawnManager, int initialLevel) {
         try {
             Gdx.app.log("GameScreen", "Initializing GameScreen");
             
@@ -104,6 +107,17 @@ public class GameScreen implements Screen {
             camera.position.set(LEVEL_WIDTH / 2, LEVEL_HEIGHT / 2, 0);
             camera.update();
             Gdx.app.log("GameScreen", "Camera and Viewport initialized in constructor");
+
+            // Устанавливаем начальный уровень
+            this.currentLevel = initialLevel;
+            Gdx.app.log("GameScreen", "GameScreen initialized with level: " + this.currentLevel);
+
+            // Сбрасываем флаги боссов
+            this.isLevel1BossDefeated = false;
+            this.isLevel2BossDefeated = false;
+            this.isLevel3BossDefeated = false;
+            this.levelTransitionInitiated = false;
+            Gdx.app.log("GameScreen", "Boss defeat flags reset");
 
             // Фоновая текстура будет установлена позже через setBackgroundTexture
             this.backgroundTexture = null; // Изначально null
@@ -206,9 +220,15 @@ public class GameScreen implements Screen {
     }
 
     private void update(float delta) {
+        // Добавляем лог в начало update
+        Gdx.app.log("GameScreen", "GameScreen update called");
+
         // Обновляем физику и сущности
         physicsSystem.update(delta);
         entitySystem.update(delta);
+        
+        // Устанавливаем текущий номер уровня в EntitySystem
+        entitySystem.setLevelNumber(currentLevel);
         
         // Проверяем коллизии с землей и платформами
         for (GameEntity entity : entitySystem.getEntities()) {
@@ -236,30 +256,105 @@ public class GameScreen implements Screen {
             }
         }
         
-        // Проверяем состояние Ведьмы VPN только на уровне 1 и если переход еще не начат
-        ///*
-        if (currentLevel == 1 && !levelTransitionInitiated) {
-            boolean witchDefeated = false; // По умолчанию считаем не побежденной
-            boolean witchFound = false; // Флаг для проверки наличия Ведьмы в системе
+        // Проверяем состояние боссов и переход на следующий уровень
+        if (!levelTransitionInitiated) {
+            boolean bossFound = false;
+            GameEntity currentLevelBoss = null;
+
+            // Находим босса текущего уровня, если он есть, и проверяем, активен ли он
             for (GameEntity entity : entitySystem.getEntities()) {
-                if (entity instanceof WitchVPN) {
-                    witchFound = true;
-                    if (!entity.isActive()) {
-                        witchDefeated = true;
+                if (currentLevel == 1 && entity instanceof WitchVPN) {
+                    WitchVPN boss = (WitchVPN) entity;
+                    currentLevelBoss = boss;
+                    bossFound = true;
+                    if (!boss.isActive()) {
+                        isLevel1BossDefeated = true;
+                        Gdx.app.log("GameScreen", "Level 1 boss (WitchVPN) defeated!");
                     }
-                    break; // Нашли Ведьму, больше не ищем
+                    break;
+                } else if (currentLevel == 2 && entity instanceof DedinsaidBoss) {
+                    DedinsaidBoss boss = (DedinsaidBoss) entity;
+                    currentLevelBoss = boss;
+                    bossFound = true;
+                    Gdx.app.log("GameScreen", "Found DedinsaidBoss, active: " + boss.isActive() + ", hits: " + boss.getCurrentHits() + "/" + boss.getHitsRequired());
+                    if (!boss.isActive() || boss.isDefeated()) {
+                        isLevel2BossDefeated = true;
+                        Gdx.app.log("GameScreen", "Level 2 boss (DedinsaidBoss) defeated!");
+                    }
+                    break;
+                } else if (currentLevel == 3 && entity instanceof CatMiner) {
+                    CatMiner boss = (CatMiner) entity;
+                    currentLevelBoss = boss;
+                    bossFound = true;
+                    if (!boss.isActive()) {
+                        isLevel3BossDefeated = true;
+                        Gdx.app.log("GameScreen", "Level 3 boss (CatMiner) defeated!");
+                    }
+                    break;
                 }
             }
 
-            // Переходим на следующий уровень, только если Ведьма найдена И побеждена
-            if (witchFound && witchDefeated) {
-                Gdx.app.log("GameScreen", "Witch VPN defeated! Initiating level 2 transition.");
+            // Добавляем проверку здоровья босса для второго уровня
+            if (currentLevel == 2 && currentLevelBoss instanceof DedinsaidBoss) {
+                DedinsaidBoss boss = (DedinsaidBoss) currentLevelBoss;
+                if (boss.isDefeated()) {
+                    isLevel2BossDefeated = true;
+                    Gdx.app.log("GameScreen", "Level 2 boss defeated by isDefeated() check!");
+                }
+            }
+
+            // Если босс текущего уровня найден и неактивен (побежден)
+            // Добавляем логирование для отладки условия перехода
+            Gdx.app.log("GameScreen", String.format(
+                "Level %d transition check: bossFound=%b, currentLevelBoss=%s, isActive=%b",
+                currentLevel,
+                bossFound,
+                currentLevelBoss != null ? currentLevelBoss.getName() : "null",
+                currentLevelBoss != null ? currentLevelBoss.isActive() : false
+            ));
+
+            // Новая проверка условия перехода на следующий уровень
+            boolean readyForNextLevel = false;
+            if (currentLevel == 1 && isLevel1BossDefeated) {
+                readyForNextLevel = true;
+                Gdx.app.log("GameScreen", "Level 1 boss defeated, ready for next level");
+            } else if (currentLevel == 2 && isLevel2BossDefeated) {
+                readyForNextLevel = true;
+                Gdx.app.log("GameScreen", "Level 2 boss defeated, ready for next level");
+            } else if (currentLevel == 3 && isLevel3BossDefeated) {
+                readyForNextLevel = true;
+                Gdx.app.log("GameScreen", "Level 3 boss defeated, ready for next level");
+            }
+
+            Gdx.app.log("GameScreen", String.format(
+                "Level transition check: currentLevel=%d, readyForNextLevel=%b, isLevel1Defeated=%b, isLevel2Defeated=%b, isLevel3Defeated=%b",
+                currentLevel, readyForNextLevel, isLevel1BossDefeated, isLevel2BossDefeated, isLevel3BossDefeated
+            ));
+
+            if (readyForNextLevel) {
+                Gdx.app.log("GameScreen", "Boss of level " + currentLevel + " defeated! Transitioning to next level...");
                 levelTransitionInitiated = true;
-                // Запускаем переход на следующий уровень через GameEngine
-                gameEngine.loadNextLevel(currentLevel + 1);
+                
+                // Очищаем текущий уровень (кроме игрока)
+                Gdx.app.log("GameScreen", "Clearing entities and platforms before level transition.");
+                entitySystem.removeAllEntitiesExceptPlayer();
+                physicsSystem.clearPlatforms();
+                Gdx.app.log("GameScreen", "Entities and platforms cleared.");
+
+                int nextLevel = currentLevel + 1;
+                
+                // Загружаем следующий уровень через LoadingScreen
+                if (nextLevel <= 3) { // Предполагаем 3 уровня в игре
+                    Gdx.app.log("GameScreen", "Loading level " + nextLevel);
+                    // Передаем загрузку следующего уровня в GameEngine через LoadingScreen
+                    gameEngine.loadNextLevel(nextLevel);
+                } else {
+                    // Игра пройдена
+                    Gdx.app.log("GameScreen", "Game completed!");
+                    // TODO: Показать экран победы или перейти в главное меню
+                }
             }
         }
-        //*/
         
         // Обновляем систему сбора предметов
         if (itemPickupSystem != null) {
@@ -420,5 +515,9 @@ public class GameScreen implements Screen {
 
     public UIManager getUIManager() {
         return this.uiManager;
+    }
+
+    public Music getLevelMusic() {
+        return levelMusic;
     }
 }

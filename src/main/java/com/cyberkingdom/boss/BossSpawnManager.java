@@ -60,13 +60,20 @@ public class BossSpawnManager {
     private void spawnBoss() {
         float x = 600; // Центр экрана по X
         float y = 400; // Центр экрана по Y
-        Boss boss = (Boss) entityFactory.createBoss("WITCH_VPN", x, y);
+        
+        // Определяем, какой босс нужно спавнить в зависимости от уровня
+        String bossType = "WITCH_VPN"; // По умолчанию Ведьма VPN
+        if (entitySystem.getLevelNumber() == 2) {
+            bossType = "DEDINSAID";
+        }
+        
+        Boss boss = (Boss) entityFactory.createBoss(bossType, x, y, entitySystem);
         if (boss != null) {
             boss.setTarget(player);
             entitySystem.addEntity(boss);
-            Gdx.app.log("BossSpawnManager", "Ведьма.VPN появилась и получила цель!");
+            Gdx.app.log("BossSpawnManager", bossType + " появился и получил цель!");
         } else {
-            Gdx.app.error("BossSpawnManager", "Не удалось создать босса!");
+            Gdx.app.error("BossSpawnManager", "Не удалось создать босса " + bossType + "!");
         }
     }
 } 

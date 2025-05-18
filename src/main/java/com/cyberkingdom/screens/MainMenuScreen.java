@@ -356,7 +356,11 @@ public class MainMenuScreen implements Screen {
 
     @Override
     public void hide() {
-        // Не останавливаем музыку при переходе
+        if (menuMusic != null) {
+            menuMusic.stop();
+        }
+        Gdx.input.setInputProcessor(null);
+        Gdx.app.log("MainMenuScreen", "MainMenuScreen hidden, input processor set to null");
     }
 
     public void resumeMusic() {

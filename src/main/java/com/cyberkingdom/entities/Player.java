@@ -366,10 +366,19 @@ public class Player extends GameEntity implements Collidable {
         collision.update(position);
     }
 
-    public void collectCoin() {
+    public void collectCoin(Item coinEntity) {
         coins++;
         if (gameScreen != null) {
             gameScreen.updateCoinCount(coins);
+
+            // Удаляем сущность монеты из EntitySystem после сбора
+            EntitySystem es = getEntitySystem();
+            if (es != null) {
+                es.removeEntity(coinEntity);
+                Gdx.app.log("Player", "Removed coin entity from EntitySystem.");
+            } else {
+                 Gdx.app.error("Player", "EntitySystem is null in collectCoin, cannot remove coin entity.");
+            }
         }
         Gdx.app.log("Player", "Collected coin, total: " + coins);
     }

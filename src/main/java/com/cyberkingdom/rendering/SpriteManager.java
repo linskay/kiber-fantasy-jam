@@ -42,6 +42,12 @@ public class SpriteManager {
             loadTexture("WITCH_VPN", "assets/entities/witch_vpn.png");
             loadTexture("CAT_MINER", "assets/entities/cat_miner.png");
         
+            // Загрузка текстур Дединсайда
+            loadTexture("dedinsaid1", "assets/entities/dedinsaid/dedinsaid1.png");
+            loadTexture("dedinsaid2", "assets/entities/dedinsaid/dedinsaid2.png");
+            loadTexture("dedinsaid3", "assets/entities/dedinsaid/dedinsaid3.png");
+            loadTexture("dedinsaid4", "assets/entities/dedinsaid/dedinsaid4.png");
+        
             // Загрузка текстур предметов
             loadTexture("COIN", "assets/Coin.png");
             loadTexture("USB_SKATERT", "assets/items/USB_Skatert.png");
@@ -63,6 +69,11 @@ public class SpriteManager {
             loadTexture("KIMCHI_2", "assets/kimchi/2kimchi.png");
             loadTexture("KIMCHI_3", "assets/kimchi/3kimchi.png");
             loadTexture("MINIGAME_BACKGROUND", "assets/background_level_bonus.png");
+
+            // Добавляем загрузку текстур для мини-игры, которые отсутствовали
+            loadTexture("CodeSymbol", "assets/code_symbol.png"); // Предполагаемый путь
+            loadTexture("Boss", "assets/generic_boss.png"); // Предполагаемый путь
+            loadTexture("CyberBackground", "assets/background_cyber.png"); // Предполагаемый путь
         
             Gdx.app.log("SpriteManager", "Finished attempting to load textures");
         } catch (Exception e) {

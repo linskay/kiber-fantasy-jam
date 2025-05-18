@@ -102,29 +102,21 @@ public class WifiKeyMinigame {
             Gdx.app.error("WifiKeyMinigame", "Failed to load WiFi Key texture");
         }
 
-        // Проверяем текстуры для символов и боссов
-        Texture codeSymbolTexture = spriteManager.getTexture("CodeSymbol");
-        if (codeSymbolTexture == null) {
-            Gdx.app.error("WifiKeyMinigame", "Failed to load CodeSymbol texture");
-            // Добавляем обработку ошибки или заглушку, если текстура не загружена
-            // Например, можно создать однопиксельную текстуру или использовать существующую заглушку
-            // Для простоты, пока просто логируем ошибку и используем null. Возможно, потребуется более сложная обработка.
-            // textures.put("CodeSymbol", createPlaceholderTexture()); // Пример добавления заглушки
-        }
+        // Удаляем попытки получить текстуры, которые не используются
+        // Texture codeSymbolTexture = spriteManager.getTexture("CodeSymbol");
+        // if (codeSymbolTexture == null) {
+        //     Gdx.app.error("WifiKeyMinigame", "Failed to load CodeSymbol texture");
+        // }
 
-        Texture bossTexture = spriteManager.getTexture("Boss");
-        if (bossTexture == null) {
-            Gdx.app.error("WifiKeyMinigame", "Failed to load Boss texture");
-            // Добавляем обработку ошибки или заглушку
-            // textures.put("Boss", createPlaceholderTexture()); // Пример добавления заглушки
-        }
+        // Texture bossTexture = spriteManager.getTexture("Boss");
+        // if (bossTexture == null) {
+        //     Gdx.app.error("WifiKeyMinigame", "Failed to load Boss texture");
+        // }
 
-        Texture backgroundTexture = spriteManager.getTexture("CyberBackground");
-        if (backgroundTexture == null) {
-            Gdx.app.error("WifiKeyMinigame", "Failed to load CyberBackground texture");
-            // Добавляем обработку ошибки или заглушку
-            // textures.put("CyberBackground", createPlaceholderTexture()); // Пример добавления заглушки
-        }
+        // Texture backgroundTexture = spriteManager.getTexture("CyberBackground"); // Это не тот фон, что используется в render
+        // if (backgroundTexture == null) {
+        //     Gdx.app.error("WifiKeyMinigame", "Failed to load CyberBackground texture");
+        // }
         
         Gdx.app.log("WifiKeyMinigame", "Initialized with player at position: " + playerBounds.x + "," + playerBounds.y);
     }

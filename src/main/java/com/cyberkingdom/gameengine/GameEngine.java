@@ -41,11 +41,12 @@ public class GameEngine extends Game {
     private Sound selectSound;
     private Texture mainMenuBackground;
     private Texture cursorTexture;
+    private Player player;
 
     @Override
     public void create() {
         try {
-            initializeCoreSystems();
+            initializeSystems();
             initializeScreens();
             showMainMenu();
         } catch (Exception e) {
@@ -54,17 +55,38 @@ public class GameEngine extends Game {
         }
     }
 
-    private void initializeCoreSystems() {
+    private void initializeSystems() {
         try {
-            batch = new SpriteBatch();
-            spriteManager = new SpriteManager();
-            spriteRenderer = new SpriteRenderer(batch);
+            Gdx.app.log("GameEngine", "Initializing systems");
+            
+            // Инициализация систем
             entitySystem = new EntitySystem();
             physicsSystem = new PhysicsSystemBuilder()
                     .setEntitySystem(entitySystem)
                     .createPhysicsSystem();
+            
+            // Инициализация SpriteManager с проверкой
+            try {
+                spriteManager = new SpriteManager();
+                if (spriteManager == null) {
+                    throw new RuntimeException("Failed to create SpriteManager");
+                }
+                
+                // Загрузка текстур
+                spriteManager.loadTextures();
+                Gdx.app.log("GameEngine", "Textures loaded successfully");
+                
+                // Настройка регионов спрайтов
+                spriteManager.setupSpriteRegions();
+                Gdx.app.log("GameEngine", "Sprite regions setup complete");
+            } catch (Exception e) {
+                Gdx.app.error("GameEngine", "Error initializing SpriteManager", e);
+                throw e;
+            }
+            
+            // Создание фабрики сущностей
             entityFactory = new EntityFactory(spriteManager, physicsSystem);
-
+            
             // Инициализация шрифта с поддержкой кириллицы
             FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
             FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
@@ -72,19 +94,21 @@ public class GameEngine extends Game {
             parameter.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<> ";
             menuFont = generator.generateFont(parameter);
             generator.dispose();
-
-            // Загрузка звуков и текстур
-            selectSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/select.mp3"));
-            mainMenuBackground = new Texture(Gdx.files.internal("assets/ui/background.png"));
-            cursorTexture = new Texture(Gdx.files.internal("assets/kursor.png"));
-
-            // Инициализация UI после загрузки всех ресурсов
-            uiManager = new UIManager(spriteRenderer, null, null, this);
-
-            Gdx.app.log("GameEngine", "Core systems initialized successfully");
+            Gdx.app.log("GameEngine", "Menu font initialized");
+            
+            // Инициализация SpriteBatch и SpriteRenderer
+            batch = new SpriteBatch();
+            spriteRenderer = new SpriteRenderer(batch);
+            if (spriteRenderer == null) {
+                 Gdx.app.error("GameEngine", "Failed to create SpriteRenderer");
+                 return;
+            }
+            Gdx.app.log("GameEngine", "SpriteBatch and SpriteRenderer initialized");
+            
+            Gdx.app.log("GameEngine", "All systems initialized successfully");
         } catch (Exception e) {
-            Gdx.app.error("GameEngine", "Failed to initialize core systems", e);
-            throw new RuntimeException("Core systems initialization failed", e);
+            Gdx.app.error("GameEngine", "Error during system initialization", e);
+            throw new RuntimeException("Failed to initialize game systems", e);
         }
     }
 
@@ -95,47 +119,75 @@ public class GameEngine extends Game {
 
     public void startGame() {
         loadCurrentLevel();
+        gameScreen = new GameScreen(
+            this,
+            entitySystem,
+            physicsSystem,
+            levelLoader,
+            uiManager,
+            spriteRenderer
+        );
+        gameScreen.setBackgroundTexture("assets/background_level1.png");
         setScreen(new LoadingScreen(this));
     }
 
     private void loadCurrentLevel() {
         try {
-            entitySystem.clear();
-            physicsSystem.clearPlatforms();
-
-            // Создаём игрока один раз
-            Player player = (Player) entityFactory.createPlayer(new Vector2(100, 300), null);
-            entitySystem.addEntity(player);
-            physicsSystem.setPlayer(player);
-
-            // Передаём этого игрока во все системы
+            Gdx.app.log("GameEngine", "Loading current level");
+            
+            if (entityFactory == null) {
+                Gdx.app.error("GameEngine", "EntityFactory is null");
+                return;
+            }
+            
+            // Создание игрока
+            player = (Player) entityFactory.createPlayer(new Vector2(100, 300), null);
+            if (player == null) {
+                Gdx.app.error("GameEngine", "Failed to create player");
+                return;
+            }
+            Gdx.app.log("GameEngine", "Player created successfully");
+            
+            // Добавление игрока в системы
+            if (entitySystem != null) {
+                entitySystem.addEntity(player);
+                Gdx.app.log("GameEngine", "Player added to entity system");
+            } else {
+                Gdx.app.error("GameEngine", "EntitySystem is null");
+            }
+            
+            if (physicsSystem != null) {
+                physicsSystem.setPlayer(player);
+                Gdx.app.log("GameEngine", "Player set in physics system");
+            } else {
+                Gdx.app.error("GameEngine", "PhysicsSystem is null");
+            }
+            
+            // Создание обработчика ввода
             inputHandler = new InputHandler(player);
-            uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
-
-            // Создаём LevelLoader
+            Gdx.app.log("GameEngine", "Input handler created");
+            
+            // Создание UI менеджера
+            uiManager = new UIManager(batch, spriteRenderer, player, inputHandler, this);
+            Gdx.app.log("GameEngine", "UI manager created");
+            
+            // Создание загрузчика уровня
             levelLoader = new LevelLoader(
-                    spriteManager,
-                    entitySystem,
-                    physicsSystem,
-                    entityFactory,
-                    currentLevelIndex + 1
-            );
-
-            // Создаём BossFightLogic
-            bossFightLogic = new BossFightLogic(levelLoader, player, this);
-
-            // Создаём GameScreen
-            gameScreen = new GameScreen(
-                this,
+                spriteManager,
                 entitySystem,
                 physicsSystem,
-                levelLoader,
-                uiManager,
-                spriteRenderer
+                entityFactory,
+                currentLevelIndex + 1
             );
+            Gdx.app.log("GameEngine", "Level loader created");
+            
+            // Создание логики босса
+            bossFightLogic = new BossFightLogic(levelLoader, player, this);
+            Gdx.app.log("GameEngine", "Boss fight logic created");
+            
+            Gdx.app.log("GameEngine", "Current level loaded successfully");
         } catch (Exception e) {
-            Gdx.app.error("GameEngine", "Level loading failed", e);
-            createFallbackEnvironment();
+            Gdx.app.error("GameEngine", "Failed to load current level", e);
         }
     }
 
@@ -148,7 +200,7 @@ public class GameEngine extends Game {
 
             // Передаём этого игрока во все системы
             inputHandler = new InputHandler(player);
-            uiManager = new UIManager(spriteRenderer, player, inputHandler, this);
+            uiManager = new UIManager(batch, spriteRenderer, player, inputHandler, this);
 
             // Создаём LevelLoader
             levelLoader = new LevelLoader(

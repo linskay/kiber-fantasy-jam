@@ -12,6 +12,10 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 import com.cyberkingdom.items.Item;
 import com.cyberkingdom.rendering.SpriteManager;
+import com.cyberkingdom.minigames.WifiKeyMinigame;
+import com.cyberkingdom.entities.EntitySystem;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Color;
 
 public class Player extends GameEntity implements Collidable {
     private static final float MOVE_SPEED = 300f;
@@ -72,10 +76,24 @@ public class Player extends GameEntity implements Collidable {
     private float respawnDuration = 1.0f;
     private float respawnInvulnerabilityDuration = 2.0f;
     private float respawnInvulnerabilityDurationTime = 0;
+    private WifiKeyMinigame wifiKeyMinigame;
+    private boolean isPlayingMinigame;
+    private SpriteManager spriteManager;
+    private boolean isInMinigame;
+    private EntitySystem entitySystem;
+    private Texture texture;
 
     public Player(Vector2 position, SpriteManager spriteManager) {
         super("Player", spriteManager);
+        this.spriteManager = spriteManager;
+        this.inventory = new Inventory(spriteManager);
+        this.health = 100;
+        this.maxHealth = 100;
+        this.coins = 0;
+        this.isInMinigame = false;
+        this.wifiKeyMinigame = null;
         initializePlayer(position);
+        loadAnimations();
     }
 
     private void initializePlayer(Vector2 position) {
@@ -96,53 +114,107 @@ public class Player extends GameEntity implements Collidable {
         
         // Инициализируем анимацию
         this.animation = new AnimationComponent();
-        
-        // Загружаем текстуры для анимации
-        loadAnimations();
     }
 
     private void loadAnimations() {
+        if (spriteManager == null) {
+            Gdx.app.error("Player", "SpriteManager is null!");
+            return;
+        }
+
         try {
-            // Загружаем текстуру покоя
-            Texture idleTexture = new Texture(Gdx.files.internal("assets/entities/player.png"));
-            Array<TextureRegion> idleFrames = new Array<>();
-            idleFrames.add(new TextureRegion(idleTexture));
-            animation.addAnimation(idleFrames);
-            Gdx.app.log("Player", "Idle animation loaded");
-
-            // Загружаем анимации из SpriteManager
-            TextureRegion[] leftFrames = spriteManager.getFrames("Player_Left");
-            TextureRegion[] rightFrames = spriteManager.getFrames("Player_Right");
-            TextureRegion[] deathFrames = spriteManager.getFrames("Player_Death");
-
-            if (leftFrames != null && rightFrames != null && deathFrames != null) {
-                // Добавляем анимации в правильном порядке
-                Array<TextureRegion> leftArray = new Array<>(leftFrames);
-                Array<TextureRegion> rightArray = new Array<>(rightFrames);
-                Array<TextureRegion> deathArray = new Array<>(deathFrames);
-
-                animation.addAnimation(leftArray);  // RUN_LEFT
-                Gdx.app.log("Player", "Left animation added with " + leftArray.size + " frames");
-                
-                animation.addAnimation(rightArray); // RUN_RIGHT
-                Gdx.app.log("Player", "Right animation added with " + rightArray.size + " frames");
-                
-                animation.addAnimation(deathArray); // DEATH
-                Gdx.app.log("Player", "Death animation added with " + deathArray.size + " frames");
-
-                // Устанавливаем начальную анимацию (покой)
-                animation.setCurrentAnimation(ANIMATION_IDLE);
-                
-                Gdx.app.log("Player", "All animations loaded successfully");
+            // Загрузка анимации idle
+            Texture idleTexture = spriteManager.getTexture("Player_Idle");
+            if (idleTexture != null) {
+                Array<TextureRegion> idleFrames = new Array<>();
+                idleFrames.add(new TextureRegion(idleTexture));
+                animation.addAnimation(idleFrames, 0.1f);
+                Gdx.app.log("Player", "Idle animation loaded successfully");
             } else {
-                Gdx.app.error("Player", "Failed to load animation frames");
-                if (leftFrames == null) Gdx.app.error("Player", "Left frames are null");
-                if (rightFrames == null) Gdx.app.error("Player", "Right frames are null");
-                if (deathFrames == null) Gdx.app.error("Player", "Death frames are null");
+                Gdx.app.error("Player", "Failed to load idle texture");
+                createFallbackTexture();
+            }
+
+            // Загрузка анимации бега влево
+            Array<TextureRegion> runLeftFrames = new Array<>();
+            boolean leftFramesLoaded = true;
+            for (int i = 1; i <= 4; i++) {
+                String textureKey = "Player_Run_Left_" + i;
+                Texture frame = spriteManager.getTexture(textureKey);
+                if (frame != null) {
+                    runLeftFrames.add(new TextureRegion(frame));
+                    Gdx.app.log("Player", "Loaded left run frame " + i);
+                } else {
+                    Gdx.app.error("Player", "Failed to load left run frame " + i + " with key: " + textureKey);
+                    leftFramesLoaded = false;
+                }
+            }
+            if (leftFramesLoaded && !runLeftFrames.isEmpty()) {
+                animation.addAnimation(runLeftFrames, 0.2f);
+                Gdx.app.log("Player", "Run left animation loaded successfully with " + runLeftFrames.size + " frames");
+            } else {
+                Gdx.app.error("Player", "Failed to load run left textures");
+            }
+
+            // Загрузка анимации бега вправо
+            Array<TextureRegion> runRightFrames = new Array<>();
+            boolean rightFramesLoaded = true;
+            for (int i = 1; i <= 4; i++) {
+                String textureKey = "Player_Run_Right_" + i;
+                Texture frame = spriteManager.getTexture(textureKey);
+                if (frame != null) {
+                    runRightFrames.add(new TextureRegion(frame));
+                    Gdx.app.log("Player", "Loaded right run frame " + i);
+                } else {
+                    Gdx.app.error("Player", "Failed to load right run frame " + i + " with key: " + textureKey);
+                    rightFramesLoaded = false;
+                }
+            }
+            if (rightFramesLoaded && !runRightFrames.isEmpty()) {
+                animation.addAnimation(runRightFrames, 0.2f);
+                Gdx.app.log("Player", "Run right animation loaded successfully with " + runRightFrames.size + " frames");
+            } else {
+                Gdx.app.error("Player", "Failed to load run right textures");
+            }
+
+            // Загрузка анимации смерти
+            Array<TextureRegion> deathFrames = new Array<>();
+            boolean deathFramesLoaded = true;
+            for (int i = 1; i <= 4; i++) {
+                String textureKey = "Player_Death_" + i;
+                Texture frame = spriteManager.getTexture(textureKey);
+                if (frame != null) {
+                    deathFrames.add(new TextureRegion(frame));
+                    Gdx.app.log("Player", "Loaded death frame " + i);
+                } else {
+                    Gdx.app.error("Player", "Failed to load death frame " + i + " with key: " + textureKey);
+                    deathFramesLoaded = false;
+                }
+            }
+            if (deathFramesLoaded && !deathFrames.isEmpty()) {
+                animation.addAnimation(deathFrames, 0.2f);
+                Gdx.app.log("Player", "Death animation loaded successfully with " + deathFrames.size + " frames");
+            } else {
+                Gdx.app.error("Player", "Failed to load death textures");
             }
         } catch (Exception e) {
             Gdx.app.error("Player", "Error loading animations", e);
+            createFallbackTexture();
         }
+    }
+
+    private void createFallbackTexture() {
+        Gdx.app.log("Player", "Creating fallback texture");
+        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.MAGENTA);
+        pixmap.fill();
+        texture = new Texture(pixmap);
+        pixmap.dispose();
+        
+        Array<TextureRegion> fallbackFrames = new Array<>();
+        fallbackFrames.add(new TextureRegion(texture));
+        animation.addAnimation(fallbackFrames, 0.1f);
+        Gdx.app.log("Player", "Fallback texture created and added to animation");
     }
 
     @Override
@@ -215,13 +287,19 @@ public class Player extends GameEntity implements Collidable {
 
     private void updateAnimation() {
         if (velocity.x < 0) {
-            animation.setCurrentAnimation(ANIMATION_RUN_LEFT);
-            isFacingRight = false;
+            if (animation.getCurrentAnimation() != ANIMATION_RUN_LEFT) {
+                animation.setCurrentAnimation(ANIMATION_RUN_LEFT);
+                isFacingRight = false;
+            }
         } else if (velocity.x > 0) {
-            animation.setCurrentAnimation(ANIMATION_RUN_RIGHT);
-            isFacingRight = true;
+            if (animation.getCurrentAnimation() != ANIMATION_RUN_RIGHT) {
+                animation.setCurrentAnimation(ANIMATION_RUN_RIGHT);
+                isFacingRight = true;
+            }
         } else {
-            animation.setCurrentAnimation(ANIMATION_IDLE);
+            if (animation.getCurrentAnimation() != ANIMATION_IDLE) {
+                animation.setCurrentAnimation(ANIMATION_IDLE);
+            }
         }
     }
 
@@ -299,7 +377,17 @@ public class Player extends GameEntity implements Collidable {
     public void collectItem(Item item) {
         if (inventory != null) {
             inventory.addItem(item);
-            Gdx.app.log("Player", "Collected item: " + item.getItemType());
+            item.setActive(false);
+            
+            EntitySystem es = getEntitySystem();
+            if (es != null) {
+                es.removeEntity(item);
+                Gdx.app.log("Player", "Removed item entity from EntitySystem: " + item.getItemType());
+            } else {
+                 Gdx.app.error("Player", "EntitySystem is null, cannot remove item entity.");
+            }
+            
+            Gdx.app.log("Player", "Collected item: " + item.getItemType() + ", set to inactive.");
         }
     }
 
@@ -373,7 +461,7 @@ public class Player extends GameEntity implements Collidable {
         animation.setCurrentAnimation(ANIMATION_DEATH);
     }
 
-    private void respawn() {
+    public void respawn() {
         position.set(respawnPosition);
         health = respawnHealth;
         coins = respawnCoins;
@@ -389,5 +477,31 @@ public class Player extends GameEntity implements Collidable {
         respawnTime = 0;
         respawnInvulnerabilityTime = 0;
         animation.setCurrentAnimation(ANIMATION_IDLE);
+    }
+
+    public void startMinigame(Item wifiKeyItem) {
+        if (!isInMinigame) {
+            isInMinigame = true;
+            wifiKeyMinigame = new WifiKeyMinigame(this, spriteManager, wifiKeyItem);
+            Gdx.app.log("Player", "Started WiFi Key minigame");
+        }
+    }
+
+    public void endMinigame() {
+        isInMinigame = false;
+        wifiKeyMinigame = null;
+        Gdx.app.log("Player", "Ended WiFi Key minigame");
+    }
+
+    public boolean isInMinigame() {
+        return isInMinigame;
+    }
+
+    public WifiKeyMinigame getWifiKeyMinigame() {
+        return wifiKeyMinigame;
+    }
+
+    public EntitySystem getEntitySystem() {
+        return gameScreen.getEntitySystem();
     }
 }

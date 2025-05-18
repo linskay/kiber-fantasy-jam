@@ -79,61 +79,87 @@ public class PhysicsSystem {
             return;
         }
 
-        // Применяем гравитацию
+        // Сохраняем предыдущую позицию игрока
+        Vector2 previousPosition = new Vector2(player.getPosition());
+        Rectangle playerBounds = player.getCollisionBounds();
         Vector2 velocity = player.getVelocity();
+
+        // Применяем гравитацию
         velocity.y += gravity * deltaTime;
 
-        // Обновляем позицию
-        Vector2 position = player.getPosition();
-        position.x += velocity.x * deltaTime;
-        position.y += velocity.y * deltaTime;
+        // Пробное обновление позиции
+        Vector2 nextPosition = new Vector2(playerBounds.x + velocity.x * deltaTime, playerBounds.y + velocity.y * deltaTime);
+        Rectangle nextPlayerBounds = new Rectangle(nextPosition.x, nextPosition.y, playerBounds.width, playerBounds.height);
+
+        // Флаг для отслеживания приземления
+        boolean landedOnPlatform = false;
 
         // Проверяем столкновения с платформами
-        boolean onGround = false;
         for (Rectangle platform : platforms) {
-            if (checkCollision(player, platform)) {
-                // Определяем направление столкновения
+             // Check for collision with the platform using the next position
+            if (nextPlayerBounds.overlaps(platform)) {
+                // Determine the overlap amount on both axes
                 float overlapX = Math.min(
-                    player.getCollisionBounds().x + player.getCollisionBounds().width - platform.x,
-                    platform.x + platform.width - player.getCollisionBounds().x
+                    nextPlayerBounds.x + nextPlayerBounds.width - platform.x,
+                    platform.x + platform.width - nextPlayerBounds.x
                 );
                 float overlapY = Math.min(
-                    player.getCollisionBounds().y + player.getCollisionBounds().height - platform.y,
-                    platform.y + platform.height - player.getCollisionBounds().y
+                    nextPlayerBounds.y + nextPlayerBounds.height - platform.y,
+                    platform.y + platform.height - nextPlayerBounds.y
                 );
 
                 if (overlapX < overlapY) {
-                    // Горизонтальное столкновение
-                    if (position.x < platform.x) {
-                        position.x = platform.x - player.getCollisionBounds().width;
-                    } else {
-                        position.x = platform.x + platform.width;
+                    // Horizontal collision
+                    if (previousPosition.x < platform.x) { // Was to the left of the platform
+                         nextPosition.x = platform.x - nextPlayerBounds.width; // Adjust to the left
+                    } else { // Was to the right of the platform
+                         nextPosition.x = platform.x + platform.width; // Adjust to the right
                     }
                     velocity.x = 0;
                 } else {
                     // Вертикальное столкновение
-                    if (position.y < platform.y) {
-                        position.y = platform.y - player.getCollisionBounds().height;
-                        velocity.y = 0;
-                    } else {
-                        position.y = platform.y + platform.height;
-                        velocity.y = 0;
-                        onGround = true;
-                        player.setOnGround(true); // Сбрасываем прыжки при приземлении
+                    if (velocity.y <= 0) { // Игрок двигается вниз или стоит на месте (проверка на приземление)
+                         // Проверяем, что нижняя граница игрока находится на или выше верхней границы платформы ДО коллизии
+                         if (previousPosition.y >= platform.y + platform.height) {
+                            nextPosition.y = platform.y + platform.height; // Ставим игрока на верх платформы
+                            velocity.y = 0; // Останавливаем падение
+                            landedOnPlatform = true; // Отмечаем приземление
+                         }
+                    } else { // Игрок двигается вверх (проверка на столкновение с потолком)
+                         // Проверяем, что верхняя граница игрока находится на или ниже нижней границы платформы ДО коллизии
+                         if (previousPosition.y + playerBounds.height <= platform.y) {
+                             // Check if it's the ground platform
+                            boolean isGround = platforms.indexOf(platform) == 0; // Adjust if ground is not always the first
+
+                            if (isGround) {
+                                // Если это земля, блокируем движение вверх
+                                nextPosition.y = platform.y - nextPlayerBounds.height; // Отталкиваем вниз
+                                velocity.y = 0; // Останавливаем движение вверх
+                            } else {
+                                // Если это не земля (обычная платформа), игнорируем коллизию (проходим насквозь)
+                                // Ничего не делаем с позицией и скоростью по Y, позволяя игроку пройти через низ платформы.
+                                // Возможно, нужно сбросить velocity.y = 0; чтобы не залипал, но пока оставим.
+                                // velocity.y = 0; // <-- Если игрок залипает под платформой при прыжке
+                            }
+                         }
                     }
+                    // В других случаях вертикального столкновения (например, внутри платформы) ничего не делаем с позицией по Y
                 }
             }
         }
 
-        // Обновляем позицию и скорость игрока
-        player.setPosition(position.x, position.y);
-        player.setVelocity(velocity.x, velocity.y);
+        // Обновляем позицию игрока только после обработки всех коллизий
+        player.setPosition(nextPosition.x, nextPosition.y);
 
-        // Если игрок на земле и не прыгает, сбрасываем вертикальную скорость
-        if (onGround && !player.isJumping()) {
-            velocity.y = 0;
-            player.setVelocity(velocity.x, velocity.y);
+        // Обновляем состояние на земле
+        if (landedOnPlatform) {
+            player.setOnGround(true);
+        } else {
+            player.setOnGround(false);
         }
+
+        // Обновляем скорость игрока
+        player.setVelocity(velocity.x, velocity.y);
 
         // Обновляем состояние прыжка
         if (player.isJumping() && velocity.y <= 0) {

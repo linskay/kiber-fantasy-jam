@@ -1,5 +1,6 @@
 package com.cyberkingdom.items;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -11,6 +12,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Scaling;
@@ -167,6 +169,16 @@ public class InventoryWindow extends Window {
                         }
 
                         cell.add(stack).size(64, 64);
+                        
+                        // Добавляем обработчик клика
+                        final Item finalItem = item;
+                        cell.addListener(new InputListener() {
+                            @Override
+                            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                                handleItemClick(finalItem);
+                                return true;
+                            }
+                        });
                     }
                 }
                 index++;
@@ -262,6 +274,11 @@ public class InventoryWindow extends Window {
                     }
                     break;
 
+                case "wifi_key":
+                    Gdx.app.log("InventoryWindow", "Using WiFi Key");
+                    selectedItem.use(player);
+                    break;
+
                 default:
                     System.out.println("Использован предмет: " + selectedItem.getItemType());
                     break;
@@ -283,7 +300,6 @@ public class InventoryWindow extends Window {
         }
     }
 
-
     private Rectangle getRandomPlatform() {
         List<Rectangle> platforms = physicsSystem.getPlatforms();
         if (platforms == null || platforms.isEmpty()) {
@@ -295,6 +311,12 @@ public class InventoryWindow extends Window {
     public void setInventory(Inventory inventory) {
         this.inventory = inventory;
         refresh();
+    }
+
+    private void handleItemClick(Item item) {
+        if (item != null) {
+            item.use(player);
+        }
     }
 }
 

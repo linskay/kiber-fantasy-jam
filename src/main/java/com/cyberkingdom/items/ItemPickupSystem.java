@@ -50,6 +50,10 @@ public class ItemPickupSystem {
                         if (itemPickupSound != null) {
                             itemPickupSound.play();
                         }
+                    } else if (item.getItemType() == ItemType.WIFI_KEY) {
+                        // Запускаем мини-игру при сборе WiFi ключа
+                        Gdx.app.log("ItemPickupSystem", "Starting WiFi Key minigame");
+                        player.startMinigame(item);
                     } else {
                         // Добавляем предмет в инвентарь игрока
                         if (player.getInventory() != null) {

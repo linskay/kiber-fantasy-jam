@@ -59,10 +59,6 @@ public class InputHandler implements InputProcessor {
 
     @Override
     public boolean keyDown(int keycode) {
-        if (keycode == Input.Keys.E) {
-            inventoryVisible = !inventoryVisible;
-            Gdx.app.log("InputHandler", "Inventory visibility changed to: " + inventoryVisible);
-        }
         return true;
     }
 

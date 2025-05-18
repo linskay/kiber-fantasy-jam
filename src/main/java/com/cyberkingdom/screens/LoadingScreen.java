@@ -64,7 +64,6 @@ public class LoadingScreen implements Screen {
             pixmap.setColor(1, 1, 1, 1);
             pixmap.fill();
             this.whitePixel = new Texture(pixmap);
-            pixmap.dispose();
             
             // Загружаем кадры анимации таракана
             Gdx.app.log("LoadingScreen", "Loading kimchi frames...");
@@ -86,26 +85,21 @@ public class LoadingScreen implements Screen {
     @Override
     public void render(float delta) {
         try {
-            Gdx.gl.glClearColor(0, 0, 0, 1);
-            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
             stateTime += delta;
             loadingProgress = Math.min(1.0f, stateTime / LOADING_DURATION);
 
-            // Обновляем камеру
-            camera.update();
+            Gdx.gl.glClearColor(0, 0, 0, 1);
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
             batch.setProjectionMatrix(camera.combined);
-            
             batch.begin();
-            
+
             // Отрисовка фона
             if (background != null) {
                 batch.draw(background, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-            } else {
-                Gdx.app.error("LoadingScreen", "Background texture is null");
             }
-            
-            // Отрисовка анимированного таракана
+
+            // Отрисовка анимации загрузки
             if (kimchiFrames.size > 0) {
                 int frameIndex = (int)(stateTime / ANIMATION_SPEED) % kimchiFrames.size;
                 Texture currentFrame = kimchiFrames.get(frameIndex);
@@ -140,7 +134,13 @@ public class LoadingScreen implements Screen {
 
             // Переход к следующему экрану после завершения загрузки
             if (stateTime >= LOADING_DURATION) {
-                game.setScreen(game.getGameScreen());
+                Gdx.app.log("LoadingScreen", "Loading completed, transitioning to GameScreen");
+                GameScreen gameScreen = game.getGameScreen();
+                if (gameScreen != null) {
+                    game.setScreen(gameScreen);
+                } else {
+                    Gdx.app.error("LoadingScreen", "GameScreen is null, cannot transition");
+                }
             }
         } catch (Exception e) {
             Gdx.app.error("LoadingScreen", "Error in render method", e);

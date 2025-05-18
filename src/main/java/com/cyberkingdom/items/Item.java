@@ -14,6 +14,7 @@ import com.cyberkingdom.physics.CollisionComponent;
 import com.cyberkingdom.rendering.SpriteManager;
 import com.badlogic.gdx.utils.Array;
 import com.cyberkingdom.entities.AnimationComponent;
+import com.cyberkingdom.entities.Player;
 
 import java.util.Arrays;
 import java.util.List;
@@ -271,6 +272,38 @@ public class Item extends GameEntity implements Collidable {
             } else {
                 Gdx.app.error("Item", "No frames found for item: " + itemType.name());
             }
+        }
+    }
+
+    public Item(ItemType type, String name, Texture texture) {
+        super(type.name(), null);
+        this.itemType = type;
+        this.name = name;
+        this.texture = texture;
+    }
+
+    public Item(ItemType type, String name, TextureRegion texture) {
+        super(type.name(), null);
+        this.itemType = type;
+        this.name = name;
+        this.texture = texture.getTexture();
+    }
+
+    public ItemType getType() {
+        return itemType;
+    }
+
+    public void use(Player player) {
+        if (itemType == ItemType.WIFI_KEY) {
+            Gdx.app.log("Item", "Using WiFi Key, itemType: " + itemType + ", name: " + name);
+            if (player != null) {
+                Gdx.app.log("Item", "Player is not null, starting minigame");
+                player.startWifiKeyMinigame();
+            } else {
+                Gdx.app.error("Item", "Player is null!");
+            }
+        } else {
+            Gdx.app.log("Item", "Item is not WiFi Key, type: " + itemType);
         }
     }
 }

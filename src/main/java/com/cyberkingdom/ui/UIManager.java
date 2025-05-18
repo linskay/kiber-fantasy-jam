@@ -35,7 +35,7 @@ public class UIManager {
     private InputHandler inputHandler;
     private Skin skin;
     private GameEngine engine;
-    private SpriteBatch uiBatch;
+    private SpriteBatch batch;
     private ShapeRenderer shapeRenderer;
     private SpriteManager spriteManager;
     private EntitySystem entitySystem;
@@ -43,13 +43,13 @@ public class UIManager {
     private PhysicsSystem physicsSystem;
     private Player player;
 
-    public UIManager(SpriteRenderer spriteRenderer, Player player, InputHandler inputHandler, GameEngine engine) {
+    public UIManager(SpriteBatch batch, SpriteRenderer spriteRenderer, Player player, InputHandler inputHandler, GameEngine engine) {
         this.inputHandler = inputHandler;
         this.engine = engine;
         this.inventoryUI = new InventoryUI();
-        this.healthBar = new HealthBar();
+        this.healthBar = new HealthBar(spriteRenderer.getSpriteManager());
         this.stage = new Stage(new ScreenViewport());
-        this.uiBatch = new SpriteBatch();
+        this.batch = batch;
         this.shapeRenderer = new ShapeRenderer();
         this.spriteManager = spriteRenderer.getSpriteManager();
         this.entitySystem = engine.getEntitySystem();
@@ -96,7 +96,6 @@ public class UIManager {
         pixmap.setColor(0.1f, 0.1f, 0.1f, 0.9f);
         pixmap.fill();
         skin.add("window-background", new Texture(pixmap));
-        pixmap.dispose();
         
         windowStyle.background = skin.newDrawable("window-background");
         skin.add("default", windowStyle);
@@ -106,7 +105,6 @@ public class UIManager {
         whitePixmap.setColor(Color.WHITE);
         whitePixmap.fill();
         skin.add("white", new Texture(whitePixmap));
-        whitePixmap.dispose();
 
         // Button
         Pixmap btnPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
@@ -114,7 +112,6 @@ public class UIManager {
         btnPixmap.fill();
         Texture btnTexture = new Texture(btnPixmap);
         skin.add("button-background", btnTexture);
-        btnPixmap.dispose();
 
         Button.ButtonStyle buttonStyle = new Button.ButtonStyle();
         buttonStyle.up = skin.newDrawable("button-background", Color.DARK_GRAY);
@@ -146,46 +143,58 @@ public class UIManager {
                 physicsSystem
             );
             inventoryWindow.setVisible(false);
+            // Вернул окну инвентаря центральное положение
+            inventoryWindow.setPosition(centerX, centerY);
             stage.addActor(inventoryWindow);
         }
     }
 
-    public void render(Player player) {
-        if (player == null) return;
-
-        // Рисуем полоску здоровья
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        healthBar.render(player, shapeRenderer);
-        shapeRenderer.end();
-
-        // Рисуем счетчик монет
-        uiBatch.begin();
-        TextureRegion[] coinRegions = spriteManager.getFrames("COIN");
-        if (coinRegions != null && coinRegions.length > 0) {
-            uiBatch.draw(coinRegions[0], 60, 48, 24, 24);
+    // Метод для обновления состояния UI (например, показ/скрытие инвентаря)
+    public void update(float delta) {
+        // Обновляем обработку ввода
+        if (inputHandler != null) {
+            inputHandler.update(delta);
         }
-        font.draw(uiBatch, "Дай.Токенов: " + player.getCoins(), 90, 65);
-        font.setColor(Color.WHITE);
-        font.draw(uiBatch, "sudo ls /Кэш(Е)", 90, 45);
-        uiBatch.end();
 
-        // Обновляем и рисуем инвентарь
+        // Обновляем и рисуем инвентарь (логика показа/скрытия)
         if (inventoryWindow != null) {
             if (inputHandler != null && inputHandler.isInventoryVisible()) {
                 inventoryWindow.setInventory(player.getInventory());
                 inventoryWindow.setVisible(true);
                 inventoryWindow.refresh();
-                stage.act(Gdx.graphics.getDeltaTime());
-                stage.draw();
+                // stage.act и stage.draw вызываются в GameScreen.render
             } else {
                 inventoryWindow.setVisible(false);
             }
         }
+    }
 
-        // Обновляем обработку ввода
-        if (inputHandler != null) {
-            inputHandler.update(Gdx.graphics.getDeltaTime());
+    // Метод для отрисовки элементов UI, использующих ShapeRenderer (например, полоска здоровья)
+    public void renderShapeUI(Player player, ShapeRenderer shapeRenderer) {
+        if (player == null || shapeRenderer == null) return;
+        healthBar.render(player, shapeRenderer);
+    }
+
+    // Метод для отрисовки элементов UI, использующих SpriteBatch (например, иконка сердечка, монеты, текст)
+    public void renderSpriteUI(Player player, SpriteBatch batch) {
+        if (player == null || batch == null) return;
+
+        // Рисуем сердечко
+        Texture heartTexture = spriteManager.getTexture("HEART");
+        if (heartTexture != null) {
+            batch.draw(heartTexture, HealthBar.START_X, HealthBar.BAR_Y - 2, HealthBar.HEART_SIZE, HealthBar.HEART_SIZE);
+        } else {
+            Gdx.app.error("UIManager", "Heart texture is null during renderSpriteUI");
         }
+
+        // Рисуем счетчик монет и текст
+        TextureRegion[] coinRegions = spriteManager.getFrames("COIN");
+        if (coinRegions != null && coinRegions.length > 0) {
+            batch.draw(coinRegions[0], 60, 48, 24, 24);
+        }
+        font.draw(batch, "Дай.Токенов: " + player.getCoins(), 90, 65);
+        font.setColor(Color.WHITE);
+        font.draw(batch, "sudo ls /Кэш(Е)", 90, 45);
     }
 
     public void updateCoinCount(int coins) {
@@ -204,9 +213,6 @@ public class UIManager {
         }
         if (skin != null) {
             skin.dispose();
-        }
-        if (uiBatch != null) {
-            uiBatch.dispose();
         }
         if (shapeRenderer != null) {
             shapeRenderer.dispose();

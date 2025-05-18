@@ -13,5 +13,8 @@ public enum ItemType {
     KNIGA,
     WIFI_KEY,
     HEALTH,
-    POWER_UP
+    POWER_UP,
+    HEALTH_POTION,
+    WEAPON,
+    ARMOR
 } 

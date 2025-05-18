@@ -115,34 +115,34 @@ public abstract class GameEntity {
     }
 
     private void createPlatformPixmap(Pixmap pixmap, int width, int height) {
-        for (int y = 0; y < height; y++) {
-            float intensity = 0.5f + (y / (float)height) * 0.2f;
-            pixmap.setColor(intensity, intensity, intensity, 1f);
-            pixmap.drawLine(0, y, width - 1, y);
-        }
+            for (int y = 0; y < height; y++) {
+                float intensity = 0.5f + (y / (float)height) * 0.2f;
+                pixmap.setColor(intensity, intensity, intensity, 1f);
+                pixmap.drawLine(0, y, width - 1, y);
+            }
     }
 
     private void createCoinPixmap(Pixmap pixmap, int width, int height) {
-        pixmap.setColor(1f, 0.8f, 0f, 1f);
-        pixmap.fillCircle(width/2, height/2, width/2 - 2);
-        pixmap.setColor(1f, 1f, 0.8f, 0.8f);
-        pixmap.fillCircle(width/3, height/3, width/8);
-        pixmap.setColor(0.8f, 0.6f, 0f, 1f);
-        pixmap.drawCircle(width/2, height/2, width/2 - 2);
+            pixmap.setColor(1f, 0.8f, 0f, 1f);
+            pixmap.fillCircle(width/2, height/2, width/2 - 2);
+            pixmap.setColor(1f, 1f, 0.8f, 0.8f);
+            pixmap.fillCircle(width/3, height/3, width/8);
+            pixmap.setColor(0.8f, 0.6f, 0f, 1f);
+            pixmap.drawCircle(width/2, height/2, width/2 - 2);
     }
 
     private void createPlayerPixmap(Pixmap pixmap, int width, int height) {
-        pixmap.setColor(0f, 0.5f, 1f, 1f);
-        pixmap.fill();
-        pixmap.setColor(0f, 0.3f, 0.8f, 1f);
-        pixmap.fillRectangle(width/4, height/4, width/2, height/2);
+            pixmap.setColor(0f, 0.5f, 1f, 1f);
+            pixmap.fill();
+            pixmap.setColor(0f, 0.3f, 0.8f, 1f);
+            pixmap.fillRectangle(width/4, height/4, width/2, height/2);
     }
 
     private void createDefaultPixmap(Pixmap pixmap, int width, int height) {
-        pixmap.setColor(1f, 0.2f, 0.2f, 1f);
-        pixmap.fill();
-        pixmap.setColor(0.8f, 0f, 0f, 1f);
-        pixmap.drawRectangle(width/8, height/8, width*3/4, height*3/4);
+            pixmap.setColor(1f, 0.2f, 0.2f, 1f);
+            pixmap.fill();
+            pixmap.setColor(0.8f, 0f, 0f, 1f);
+            pixmap.drawRectangle(width/8, height/8, width*3/4, height*3/4);
     }
 
     public void update(float deltaTime) {
@@ -169,7 +169,7 @@ public abstract class GameEntity {
     public void dispose() {
         if (texture != null) {
             texture.dispose();
-            texture = null;
+        texture = null;
         }
         if (animation != null) {
             animation.dispose();

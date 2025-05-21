@@ -1,34 +1,69 @@
 package com.cyberkingdom.rendering;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.cyberkingdom.entities.GameEntity;
+import com.cyberkingdom.entities.Platform;
+import com.cyberkingdom.items.Item;
+import com.cyberkingdom.entities.Player;
 
 public class SpriteRenderer {
     private final SpriteBatch batch;
+    private final SpriteManager spriteManager;
 
-    public SpriteRenderer(SpriteBatch batch) {
+    public SpriteRenderer(SpriteBatch batch, SpriteManager spriteManager) {
         this.batch = batch;
+        this.spriteManager = spriteManager;
+    }
+
+    public SpriteManager getSpriteManager() {
+        return spriteManager;
     }
 
     public void render(GameEntity entity) {
-        if (entity.isActive() && entity.getAnimation() != null) {
-            TextureRegion frame = entity.getAnimation().getCurrentFrame(0.016f);
-            if (frame != null) {
-                float width = frame.getRegionWidth();
-                float height = frame.getRegionHeight();
-                batch.draw(frame,
-                        entity.getPosition().x - width / 2f,
-                        entity.getPosition().y - height / 2f,
-                        width,
-                        height);
-            } else {
-                System.err.println("Нет кадра для " + entity.getName());
+        if (entity == null) {
+            Gdx.app.error("SpriteRenderer", "Entity is null");
+            return;
+        }
+
+        if (entity instanceof Player) {
+            ((Player) entity).render(batch);
+        } else if (entity instanceof Item) {
+            ((Item) entity).render(batch);
+        } else if (entity instanceof Platform) {
+            Platform platform = (Platform) entity;
+            if (!platform.isGround()) {
+                platform.render(batch);
             }
+        } else {
+            // Для остальных сущностей используем стандартную отрисовку
+            float x = entity.getPosition().x;
+            float y = entity.getPosition().y;
+            float width = entity.getTexture().getWidth();
+            float height = entity.getTexture().getHeight();
+
+            if (entity.getAnimation() != null) {
+                TextureRegion currentFrame = entity.getAnimation().getCurrentFrame(Gdx.graphics.getDeltaTime());
+                if (currentFrame != null) {
+                    batch.draw(currentFrame, x, y, width, height);
+                    return;
+                }
+            }
+
+            batch.draw(entity.getTexture(), x, y, width, height);
         }
     }
 
-    public void begin() { batch.begin(); }
-    public void end() { batch.end(); }
-    public SpriteBatch getBatch() { return batch; }
+    public SpriteManager getManager() {
+        return spriteManager;
+    }
+
+    public void dispose() {
+        // batch.dispose(); // Не освобождаем внешний batch здесь
+    }
+
+    public SpriteBatch getBatch() {
+        return batch;
+    }
 }

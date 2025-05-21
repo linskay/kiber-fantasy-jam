@@ -1,49 +1,106 @@
 package com.cyberkingdom.items;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.cyberkingdom.entities.EntitySystem;
 import com.cyberkingdom.entities.GameEntity;
 import com.cyberkingdom.entities.Player;
 import com.cyberkingdom.physics.CollisionComponent;
+import com.badlogic.gdx.math.Rectangle;
+import com.cyberkingdom.world.LevelLoader;
+import com.cyberkingdom.entities.Platform;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ItemPickupSystem {
-    private EntitySystem entitySystem;
+    private final EntitySystem entitySystem;
     private Player player;
+    private Sound itemPickupSound;
+    private final LevelLoader levelLoader;
 
-    public ItemPickupSystem(EntitySystem entitySystem, Player player) {
-        this.entitySystem = entitySystem;
+    public void setPlayer(Player player) {
         this.player = player;
     }
 
+    public ItemPickupSystem(EntitySystem entitySystem, Player player, LevelLoader levelLoader) {
+        this.entitySystem = entitySystem;
+        this.player = player;
+        this.levelLoader = levelLoader;
+        try {
+            this.itemPickupSound = Gdx.audio.newSound(Gdx.files.internal("assets/musics/gg_saveItems.mp3"));
+        } catch (Exception e) {
+            Gdx.app.error("ItemPickupSystem", "Failed to load sound: " + e.getMessage());
+        }
+    }
+
     public void update() {
+        List<Item> itemsToRemove = new ArrayList<>();
         CollisionComponent playerCollision = player.getCollisionComponent();
         playerCollision.update(player.getPosition());
 
-        List<GameEntity> entities = entitySystem.getEntities();
-        List<Item> itemsToRemove = new ArrayList<>();
-
-        for (GameEntity entity : entities) {
+        for (GameEntity entity : entitySystem.getEntities()) {
             if (entity instanceof Item) {
                 Item item = (Item) entity;
                 CollisionComponent itemCollision = item.getCollisionComponent();
                 itemCollision.update(item.getPosition());
 
                 if (playerCollision.collidesWith(itemCollision)) {
-                    // Добавляем предмет в инвентарь игрока
-                    player.getInventory().addItem(item);
-
-                    // Помечаем предмет для удаления из мира
-                    itemsToRemove.add(item);
+                    Gdx.app.log("ItemPickupSystem", "Collision detected with item: " + item.getItemType());
+                    
+                    if (item.getItemType() == ItemType.COIN) {
+                        player.collectCoin(item);
+                        itemsToRemove.add(item);
+                        if (itemPickupSound != null) {
+                            itemPickupSound.play();
+                        }
+                    } else if (item.getItemType() == ItemType.WIFI_KEY) {
+                        // Запускаем мини-игру при сборе WiFi ключа
+                        Gdx.app.log("ItemPickupSystem", "Starting WiFi Key minigame");
+                        player.startMinigame(item);
+                    } else if (item.getItemType() == ItemType.KNIGA) {
+                        Gdx.app.log("ItemPickupSystem", "Detected KNIGA item. Calling player.collectItem.");
+                        player.collectItem(item);
+                        itemsToRemove.add(item);
+                    } else {
+                        // Добавляем предмет в инвентарь игрока
+                        if (player.getInventory() != null) {
+                            if (player.getInventory().addItem(item)) {
+                                Gdx.app.log("ItemPickupSystem", "Item added to inventory: " + item.getItemType());
+                                itemsToRemove.add(item);
+                                if (itemPickupSound != null) {
+                                    itemPickupSound.play();
+                                }
+                            } else {
+                                Gdx.app.log("ItemPickupSystem", "Failed to add item to inventory: " + item.getItemType());
+                            }
+                        } else {
+                            Gdx.app.error("ItemPickupSystem", "Player inventory is null!");
+                        }
+                    }
                 }
             }
         }
 
-        // Удаляем предметы, которые собраны
+        // Удаляем собранные предметы
         for (Item item : itemsToRemove) {
-            entitySystem.removeEntity(item);
-            item.dispose();
+            if (entitySystem.getEntities().contains(item)) {
+                entitySystem.removeEntity(item);
+                Gdx.app.log("ItemPickupSystem", "Removed item from EntitySystem: " + item.getItemType());
+            }
+            
+            if (item.getItemType() == ItemType.COIN) {
+                // Если это монета, удаляем платформу из списка платформ с монетами
+                Rectangle platform = new Rectangle(item.getPosition().x, item.getPosition().y - 10, 32, 32);
+                levelLoader.removePlatformFromCoinsList(platform);
+            }
+        }
+    }
+
+    public void dispose() {
+        if (itemPickupSound != null) {
+            itemPickupSound.dispose();
+            itemPickupSound = null;
         }
     }
 }

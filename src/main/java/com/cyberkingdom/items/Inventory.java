@@ -3,66 +3,86 @@ package com.cyberkingdom.items;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.cyberkingdom.rendering.SpriteManager;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.math.Vector2;
 
 public class Inventory {
     private List<Item> items;
-    private int capacity = 9; // 3x3 ячейки
+    private int maxSize;
+    private SpriteManager spriteManager;
+    private boolean isVisible = false;
 
-    public Inventory() {
+    public Inventory(SpriteManager spriteManager) {
         this.items = new ArrayList<>();
+        this.maxSize = 20;
+        this.spriteManager = spriteManager;
     }
 
-    public int getCapacity() {
-        return capacity;
-    }
-
-    /**
-     * Возвращает неизменяемый список предметов,
-     * чтобы внешний код не мог менять содержимое инвентаря напрямую.
-     */
-    public List<Item> getItems() {
-        return Collections.unmodifiableList(items);
-    }
-
-    /**
-     * Добавляет предмет в инвентарь.
-     * Если предмет того же типа уже есть и он стекается, увеличивает количество.
-     * Иначе добавляет копию нового предмета, если есть место.
-     * Возвращает true, если предмет добавлен, false - если инвентарь полон.
-     */
     public boolean addItem(Item newItem) {
+        if (newItem == null) {
+            Gdx.app.error("Inventory", "Attempted to add null item");
+            return false;
+        }
+
+        // Проверяем, есть ли уже такой предмет
         for (Item item : items) {
-            if (item.getItemType().equals(newItem.getItemType())) {
-                // Предполагаем, что предметы одного типа можно стекать
+            if (item.getItemType() == newItem.getItemType()) {
+                // Если есть, увеличиваем количество
                 item.increaseQuantity(newItem.getQuantity());
+                Gdx.app.log("Inventory", "Stacked item: " + item.getItemType() + ", qty: " + item.getQuantity());
                 return true;
             }
         }
-        if (items.size() < capacity) {
-            // Создаем копию предмета, чтобы отделить инвентарь от игрового объекта
-            Item copy = new Item(newItem.getPosition(), newItem.getItemType(), newItem.getDescription(), newItem.getQuantity());
+
+        // Если предмета нет и есть место, добавляем новый
+        if (items.size() < maxSize) {
+            Item copy = new Item(newItem.getItemType(), new Vector2(), newItem.getQuantity(), spriteManager);
             items.add(copy);
+            Gdx.app.log("Inventory", "Added new item: " + copy.getItemType());
             return true;
         }
-        return false; // нет места
+
+        Gdx.app.log("Inventory", "Inventory full, cannot add: " + newItem.getItemType());
+        return false;
     }
 
-    /** Получить предмет по индексу */
-    public Item getItem(int index) {
-        if (index < 0 || index >= items.size()) return null;
-        return items.get(index);
+    public void removeItem(Item item) {
+        items.remove(item);
     }
 
-    /** Удалить предмет из инвентаря */
-    public boolean removeItem(Item item) {
-        return items.remove(item);
+    public List<Item> getItems() {
+        return items;
     }
 
-    /** Удалить предмет по индексу */
-    public boolean removeItem(int index) {
-        if (index < 0 || index >= items.size()) return false;
-        items.remove(index);
-        return true;
+    public int getSize() {
+        return items.size();
+    }
+
+    public int getMaxSize() {
+        return maxSize;
+    }
+
+    public void setMaxSize(int maxSize) {
+        this.maxSize = maxSize;
+    }
+
+    public void dispose() {
+        if (items != null) {
+            for (Item item : items) {
+                item.dispose();
+            }
+            items.clear();
+        }
+    }
+
+    public void toggle() {
+        isVisible = !isVisible;
+        Gdx.app.log("Inventory", "Inventory visibility toggled to: " + isVisible);
+    }
+
+    public boolean isVisible() {
+        return isVisible;
     }
 }
 

@@ -4,8 +4,8 @@ import com.cyberkingdom.entities.EntitySystem;
 
 public class PhysicsSystemBuilder {
     private EntitySystem entitySystem;
-    private float worldWidth;
-    private float worldHeight;
+    private float worldWidth = 1200f;
+    private float worldHeight = 800f;
 
     public PhysicsSystemBuilder setEntitySystem(EntitySystem entitySystem) {
         this.entitySystem = entitySystem;
@@ -23,6 +23,7 @@ public class PhysicsSystemBuilder {
     }
 
     public PhysicsSystem createPhysicsSystem() {
-        return new PhysicsSystem(entitySystem, worldWidth, worldHeight);
+        PhysicsSystem physicsSystem = new PhysicsSystem(entitySystem);
+        return physicsSystem;
     }
 }

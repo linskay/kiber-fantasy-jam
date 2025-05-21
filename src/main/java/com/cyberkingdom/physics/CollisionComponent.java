@@ -17,7 +17,7 @@ public class CollisionComponent {
     }
 
     public boolean collidesWith(CollisionComponent other) {
-        return bounds.overlaps(other.bounds);
+        return bounds.overlaps(other.getBounds());
     }
 
     public Rectangle getBounds() {

@@ -1,5 +1,6 @@
 package com.cyberkingdom.items;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -11,6 +12,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Scaling;
@@ -36,22 +38,24 @@ public class InventoryWindow extends Window {
     private Skin skin;
     private Table gridTable;
     private Inventory inventory;
-    private Player player; // Добавлено поле игрока
+    private Player player;
 
     // Поля для подсказки
     private Label tooltipLabel;
     private Table tooltipTable;
 
     public InventoryWindow(Skin skin, float x, float y, Inventory inventory,
-                           Player player,EntitySystem entitySystem,
-                           EntityFactory entityFactory,PhysicsSystem physicsSystem) {
-        super("Инвентарь", skin);
+                           Player player, EntitySystem entitySystem,
+                           EntityFactory entityFactory, PhysicsSystem physicsSystem) {
+        super("sudo ls /Кэш(Е)", skin);
         this.skin = skin;
         this.inventory = inventory;
-        this.player = player; // Инициализация игрока
+        this.player = player;
         this.entitySystem = entitySystem;
         this.entityFactory = entityFactory;
         this.physicsSystem = physicsSystem;
+        
+        // Создаем таблицу для сетки инвентаря
         gridTable = new Table(skin);
         gridTable.defaults().size(80, 80).pad(5);
 
@@ -65,8 +69,8 @@ public class InventoryWindow extends Window {
             gridTable.row();
         }
 
+        // Добавляем таблицу в окно
         this.add(gridTable).expand().fill();
-
         this.setSize(300, 400);
         this.setVisible(false);
         this.setMovable(false);
@@ -78,19 +82,13 @@ public class InventoryWindow extends Window {
         tooltipLabel.setWidth(200);
 
         tooltipTable = new Table(skin);
-
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(0, 0, 0, 0.7f);
-        pixmap.fill();
-        TextureRegionDrawable backgroundDrawable = new TextureRegionDrawable(new TextureRegion(new Texture(pixmap)));
-        pixmap.dispose();
-
-        tooltipTable.setBackground(backgroundDrawable);
-
+        tooltipTable.setBackground(skin.newDrawable("window-background"));
         tooltipTable.add(tooltipLabel).width(200).pad(10);
         tooltipTable.setVisible(false);
         this.addActor(tooltipTable);
 
+        // Обновляем отображение
+        refresh();
         updateSelection();
 
         // Обработка клавиш для навигации и выбора
@@ -125,6 +123,8 @@ public class InventoryWindow extends Window {
 
     /** Обновляет отображение предметов в ячейках */
     public void refresh() {
+        if (inventory == null) return;
+        
         List<Item> items = new ArrayList<>(inventory.getItems());
         int index = 0;
 
@@ -135,15 +135,19 @@ public class InventoryWindow extends Window {
 
                 if (index < items.size()) {
                     Item item = items.get(index);
-
-                    Texture texture = item.getTexture();
-                    if (texture != null) {
+                    if (item != null) {
                         Stack stack = new Stack();
+                        
+                        // Добавляем изображение предмета
+                        if (item.getTexture() != null) {
+                            Image img = new Image(new TextureRegionDrawable(new TextureRegion(item.getTexture())));
+                            img.setScaling(Scaling.fit);
+                            stack.add(img);
+                        } else {
+                            com.badlogic.gdx.Gdx.app.log("InventoryWindow", "Item " + item.getItemType() + " has no texture!");
+                        }
 
-                        Image img = new Image(new TextureRegionDrawable(new TextureRegion(texture)));
-                        img.setScaling(Scaling.fit);
-                        stack.add(img);
-
+                        // Добавляем количество предметов
                         if (item.getQuantity() > 1) {
                             Label.LabelStyle labelStyle = skin.get(Label.LabelStyle.class);
                             if (labelStyle == null) {
@@ -154,20 +158,29 @@ public class InventoryWindow extends Window {
                             Label qtyLabel = new Label(String.valueOf(item.getQuantity()), labelStyle);
                             qtyLabel.setColor(Color.WHITE);
                             qtyLabel.setFontScale(0.8f);
-                            qtyLabel.setAlignment(Align.center);
+                            qtyLabel.setAlignment(Align.bottomRight);
 
                             Table qtyTable = new Table();
                             qtyTable.setFillParent(true);
-                            qtyTable.top().right().pad(2);
+                            qtyTable.bottom().right().pad(2);
                             qtyTable.add(qtyLabel);
 
                             stack.add(qtyTable);
                         }
 
                         cell.add(stack).size(64, 64);
+                        
+                        // Добавляем обработчик клика
+                        final Item finalItem = item;
+                        cell.addListener(new InputListener() {
+                            @Override
+                            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                                handleItemClick(finalItem);
+                                return true;
+                            }
+                        });
                     }
                 }
-
                 index++;
             }
         }
@@ -210,15 +223,12 @@ public class InventoryWindow extends Window {
         List<Item> items = new ArrayList<>(inventory.getItems());
         if (index < items.size()) {
             Item selectedItem = items.get(index);
-            System.out.println("Использован предмет: " + selectedItem.getItemType() + " x" + selectedItem.getQuantity());
-
-            String itemType = selectedItem.getItemType().toLowerCase();
+            String itemType = selectedItem.getItemType().toString().toLowerCase();
 
             switch (itemType) {
                 case "crypto_coin":
                     float healAmount = player.getMaxHealth() * 0.5f;
                     player.setHealth(Math.min(player.getHealth() + healAmount, player.getMaxHealth()));
-                    System.out.println("Восстановлено " + healAmount + " HP");
                     break;
 
                 case "vpn_token":
@@ -235,9 +245,6 @@ public class InventoryWindow extends Window {
                                 entitySystem.addEntity(cryptoCoin);
                             }
                         }
-                        System.out.println("Добавлено " + n + " CRYPTO_COIN");
-                    } else {
-                        System.out.println("Платформы отсутствуют, монеты не созданы.");
                     }
                     break;
 
@@ -267,6 +274,11 @@ public class InventoryWindow extends Window {
                     }
                     break;
 
+                case "wifi_key":
+                    Gdx.app.log("InventoryWindow", "Using WiFi Key");
+                    selectedItem.use(player);
+                    break;
+
                 default:
                     System.out.println("Использован предмет: " + selectedItem.getItemType());
                     break;
@@ -288,7 +300,6 @@ public class InventoryWindow extends Window {
         }
     }
 
-
     private Rectangle getRandomPlatform() {
         List<Rectangle> platforms = physicsSystem.getPlatforms();
         if (platforms == null || platforms.isEmpty()) {
@@ -297,6 +308,16 @@ public class InventoryWindow extends Window {
         return platforms.get(random.nextInt(platforms.size()));
     }
 
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
+        refresh();
+    }
+
+    private void handleItemClick(Item item) {
+        if (item != null) {
+            item.use(player);
+        }
+    }
 }
 
 

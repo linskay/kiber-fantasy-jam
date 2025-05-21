@@ -1,23 +1,49 @@
 package com.cyberkingdom.entities;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.Gdx;
 import com.cyberkingdom.items.Item;
+import com.cyberkingdom.items.ItemType;
+import com.cyberkingdom.screens.GameScreen;
+import com.cyberkingdom.rendering.SpriteManager;
+import com.cyberkingdom.entities.EntitySystem;
+import com.cyberkingdom.physics.PhysicsSystem;
+import com.cyberkingdom.entities.Projectile;
+import com.cyberkingdom.entities.FlyingBook;
 
 import java.util.Random;
 
 public class EntityFactory {
     private static int itemCount = 0;
     private static final Random random = new Random();
+    private SpriteManager spriteManager;
+    private PhysicsSystem physicsSystem;
 
     // Используйте enum или константы, чтобы избежать ошибок в строках
     private static final String[] ITEMS = {
-            "CRYPTO_COIN", "VPN_TOKEN", "USB_SCATERT", "HARDWARE_WALLET"
+            "USB_SKATERT", "CRYPTO_SHOVEL", "RTX_4090", "TUSHENKA", "KNIGA", "WIFI_KEY"
     };
 
+    public EntityFactory(SpriteManager spriteManager, PhysicsSystem physicsSystem) {
+        this.spriteManager = spriteManager;
+        this.physicsSystem = physicsSystem;
+    }
+
     public GameEntity createPlayer(float x, float y) {
-        Player player = new Player(x, y);
-        if (player.getAnimation() != null) {
-            player.getAnimation().setFrameDuration(0.08f);
+        return createPlayer(new Vector2(x, y), null);
+    }
+
+    public GameEntity createPlayer(Vector2 position, GameScreen gameScreen) {
+        Gdx.app.log("EntityFactory", "Creating player at position: " + position.x + ", " + position.y);
+        Player player = new Player(position, spriteManager);
+        if (gameScreen != null) {
+            Gdx.app.log("EntityFactory", "Setting GameScreen for player");
+            player.setGameScreen(gameScreen);
+            player.setEntitySystem(gameScreen.getEntitySystem());
+        } else {
+            Gdx.app.error("EntityFactory", "GameScreen is null when creating player");
         }
         return player;
     }
@@ -28,54 +54,74 @@ public class EntityFactory {
             type = Enemy.EnemyType.valueOf(name.toUpperCase());
         } catch (IllegalArgumentException e) {
             System.err.println("Unknown enemy type: " + name + ". Using fallback type TROLL_BOT.");
-            type = Enemy.EnemyType.TROLL_BOT; // Используем первый или подходящий тип по умолчанию
+            type = Enemy.EnemyType.TROLL_BOT;
         }
-        Enemy enemy = new Enemy(type, x, y);
-        if (enemy.getAnimation() != null) {
-            enemy.getAnimation().setFrameDuration(0.1f);
-        }
+        Enemy enemy = new Enemy(type, x, y, spriteManager);
         return enemy;
     }
 
-    public GameEntity createBoss(String name, float x, float y) {
-        Boss boss;
-        switch (name.toUpperCase()) {
+    public GameEntity createBoss(String bossType, float x, float y, EntitySystem entitySystem) {
+        Vector2 position = new Vector2(x, y);
+        switch (bossType) {
             case "CAT_MINER":
-                boss = new CatMiner(x, y);
-                break;
+                return new CatMiner(x, y, spriteManager);
+            case "DEDINSAID":
+                return new DedinsaidBoss(position, spriteManager, entitySystem);
             case "WITCH_VPN":
-                boss = new Boss(name, x, y);
-                boss.setMaxHitsToDefeat(5);
-                break;
+                return new WitchVPN(x, y, physicsSystem, spriteManager);
             default:
-                boss = new Boss(name, x, y);
-                break;
+                Gdx.app.error("EntityFactory", "Unknown boss type: " + bossType);
+                return null;
         }
-        if (boss.getAnimation() != null) {
-            boss.getAnimation().setFrameDuration(0.1f);
-        }
-        return boss;
     }
 
-    // Новый метод создания предмета с указанием количества
     public Item createItem(String itemType, Vector2 position, int quantity) {
-        for (Item.ItemData data : Item.ALL_ITEMS) {
-            if (data.id.equalsIgnoreCase(itemType)) {
-                return new Item(position, data, quantity);
+        try {
+            Gdx.app.log("EntityFactory", "Creating item: " + itemType + " at " + position);
+            TextureRegion[] frames = spriteManager.getFrames(itemType);
+            if (frames == null || frames.length == 0) {
+                Gdx.app.error("EntityFactory", "No frames found for item: " + itemType);
+                return null;
             }
-        }
-        System.err.println("Неизвестный тип предмета: " + itemType);
-        return null;
-    }
 
-    // Обновлённый существующий метод для совместимости
-    public GameEntity createItem(Vector2 position, String name) {
-        return createItem(name.toLowerCase(), position, 1);
+            Texture texture = frames[0].getTexture();
+            if (texture == null) {
+                Gdx.app.error("EntityFactory", "No texture found for item: " + itemType);
+                return null;
+            }
+
+            // Находим описание предмета
+            String description = "";
+            for (Item.ItemData data : Item.ALL_ITEMS) {
+                if (data.id.equals(itemType)) {
+                    description = data.description + "\n\"" + data.effect + "\"";
+                    break;
+                }
+            }
+
+            ItemType type;
+            try {
+                type = ItemType.valueOf(itemType);
+            } catch (IllegalArgumentException e) {
+                Gdx.app.error("EntityFactory", "Unknown item type: " + itemType);
+                return null;
+            }
+
+            Item item = new Item(type, position, quantity, spriteManager);
+            item.setName(itemType);
+            
+            Gdx.app.log("EntityFactory", "Created item: " + itemType + " with texture size: " + 
+                texture.getWidth() + "x" + texture.getHeight());
+            return item;
+        } catch (Exception e) {
+            Gdx.app.error("EntityFactory", "Failed to create item: " + itemType, e);
+            return null;
+        }
     }
 
     public GameEntity createRandomItem(float x, float y) {
         String randomItemName = ITEMS[random.nextInt(ITEMS.length)];
-        return createItem(new Vector2(x, y), randomItemName);
+        return createItem(randomItemName, new Vector2(x, y), 1);
     }
 
     public static void resetItemCounter() {
@@ -106,6 +152,41 @@ public class EntityFactory {
                 return "Аппаратный кошелёк для криптовалюты";
             default:
                 return "Описание отсутствует";
+        }
+    }
+
+    public Projectile createProjectile(float x, float y, float vx, float vy, float damage) {
+        TextureRegion[] frames = spriteManager.getFrames("WITCH_VPN");
+        TextureRegion texture = (frames != null && frames.length > 0) ? frames[0] : null;
+
+        if (texture == null) {
+             Gdx.app.error("EntityFactory", "Failed to get texture for projectile.");
+             return null;
+        }
+
+        Projectile projectile = new Projectile(x, y, vx, vy, damage, spriteManager);
+        return projectile;
+    }
+
+    public FlyingBook createFlyingBook(Vector2 position) {
+        try {
+             Gdx.app.log("EntityFactory", "Creating FlyingBook at " + position);
+            Texture bookTexture = spriteManager.getTexture("KNIGA");
+            if (bookTexture == null) {
+                Gdx.app.error("EntityFactory", "Failed to get KNIGA texture");
+                return null;
+            }
+            FlyingBook flyingBook = new FlyingBook(position, bookTexture);
+            // Устанавливаем цель - игрока из PhysicsSystem
+            if (physicsSystem != null && physicsSystem.getPlayer() != null) {
+                flyingBook.setTarget(physicsSystem.getPlayer());
+            } else {
+                Gdx.app.error("EntityFactory", "Cannot set target for FlyingBook - player is null");
+            }
+            return flyingBook;
+        } catch (Exception e) {
+             Gdx.app.error("EntityFactory", "Failed to create FlyingBook at " + position, e);
+             return null;
         }
     }
 }

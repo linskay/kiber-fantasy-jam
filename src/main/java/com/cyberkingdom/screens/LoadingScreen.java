@@ -143,6 +143,8 @@ public class LoadingScreen implements Screen, Disposable {
         assetManager.load("assets/kimchi/3kimchi.png", Texture.class);
         assetManager.load("assets/entities/virus.png", Texture.class);
         assetManager.load("assets/background_level_bonus.png", Texture.class);
+        assetManager.load("assets/entities/witch_vpn.png", Texture.class);
+        assetManager.load("assets/entities/witchVPN_dialog.png", Texture.class);
 
         // Сброс таймера загрузки
         stateTime = 0;

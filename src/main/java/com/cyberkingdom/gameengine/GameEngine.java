@@ -60,10 +60,14 @@ public class GameEngine extends Game {
     private MusicManager musicManager;
     private BitmapFont storyCreditsFont;
 
+    public GameEngine() {
+        this.assetManager = new AssetManager();
+        // ... existing code ...
+    }
+
     @Override
     public void create() {
         try {
-            assetManager = new AssetManager();
             initializeSystems();
             initializeScreens();
             showMainMenu();

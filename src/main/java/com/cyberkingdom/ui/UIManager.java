@@ -42,6 +42,7 @@ public class UIManager {
     private EntityFactory entityFactory;
     private PhysicsSystem physicsSystem;
     private Player player;
+    private DialogSystem dialogSystem;
 
     public UIManager(SpriteBatch batch, SpriteRenderer spriteRenderer, Player player, InputHandler inputHandler, GameEngine engine) {
         this.inputHandler = inputHandler;
@@ -56,6 +57,10 @@ public class UIManager {
         this.entityFactory = engine.getEntityFactory();
         this.physicsSystem = engine.getPhysicsSystem();
         this.player = player;
+        this.dialogSystem = new DialogSystem();
+        Gdx.app.log("UIManager", "Created DialogSystem");
+        this.dialogSystem.setAssetManager(engine.getAssetManager());
+        Gdx.app.log("UIManager", "Set AssetManager in DialogSystem");
 
         // Создаем шрифт
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/arial.ttf"));
@@ -167,6 +172,11 @@ public class UIManager {
                 inventoryWindow.setVisible(false);
             }
         }
+
+        // Обновляем диалоговую систему
+        if (dialogSystem != null) {
+            dialogSystem.update(delta);
+        }
     }
 
     // Метод для отрисовки элементов UI, использующих ShapeRenderer (например, полоска здоровья)
@@ -201,6 +211,17 @@ public class UIManager {
         Gdx.app.log("UIManager", "Updating coin count to: " + coins);
     }
 
+    public void render(SpriteBatch batch) {
+        // Рисуем диалоговую систему
+        if (dialogSystem != null) {
+            dialogSystem.render(batch);
+        }
+    }
+
+    public DialogSystem getDialogSystem() {
+        return dialogSystem;
+    }
+
     public void dispose() {
         if (inventoryUI != null) {
             inventoryUI.dispose();
@@ -216,6 +237,9 @@ public class UIManager {
         }
         if (shapeRenderer != null) {
             shapeRenderer.dispose();
+        }
+        if (dialogSystem != null) {
+            dialogSystem.dispose();
         }
     }
 
